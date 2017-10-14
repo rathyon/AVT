@@ -1,0 +1,116 @@
+﻿  vsShaderLib.cpp
+c:\users\rathyon\c++\avt\projects\micromachines\vsshaderlib.cpp(569): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  lightDemo.cpp
+  basic_geometry.cpp
+c:\users\rathyon\c++\avt\projects\micromachines\basic_geometry.cpp(173): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  AVTmathLib.cpp
+  Generating Code...
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewBindBuffer
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewBindBuffer
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewBufferData
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewBufferData
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewBufferSubData
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewBufferSubData
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewGenBuffers
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGenBuffers
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewEnableVertexAttribArray
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewVertexAttribPointer
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewBindVertexArray
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewBindVertexArray
+basic_geometry.obj : error LNK2001: unresolved external symbol __imp___glewGenVertexArrays
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glewInit referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutInitWindowPosition referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutInitWindowSize referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutInitDisplayMode referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutMainLoop referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutSetWindow referenced in function "void __cdecl timer(int)" (?timer@@YAXH@Z)
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutSetWindowTitle referenced in function "void __cdecl timer(int)" (?timer@@YAXH@Z)
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutPostRedisplay referenced in function "void __cdecl refresh(int)" (?refresh@@YAXH@Z)
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutSwapBuffers referenced in function "void __cdecl renderScene(void)" (?renderScene@@YAXXZ)
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutTimerFunc referenced in function "void __cdecl refresh(int)" (?refresh@@YAXH@Z)
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutKeyboardFunc referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutReshapeFunc referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutDisplayFunc referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutMouseFunc referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutMotionFunc referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp___glutInitWithExit referenced in function glutInit_ATEXIT_HACK
+lightDemo.obj : error LNK2019: unresolved external symbol __imp___glutCreateWindowWithExit referenced in function glutCreateWindow_ATEXIT_HACK
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutLeaveMainLoop referenced in function "void __cdecl processKeys(unsigned char,int,int)" (?processKeys@@YAXEHH@Z)
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutMouseWheelFunc referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutSetOption referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutInitContextVersion referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutInitContextFlags referenced in function main
+lightDemo.obj : error LNK2019: unresolved external symbol __imp_glutInitContextProfile referenced in function main
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewBindAttribLocation
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewBindAttribLocation
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewGetUniformLocation
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetUniformLocation
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewLinkProgram
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewLinkProgram
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewUniform1f
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewUniform4fv
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewUniformMatrix3fv
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewUniformMatrix4fv
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewUseProgram
+lightDemo.obj : error LNK2001: unresolved external symbol __imp___glewBindFragDataLocation
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewBindFragDataLocation
+lightDemo.obj : error LNK2001: unresolved external symbol __imp_glewExperimental
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewAttachShader
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewCompileShader
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewCreateProgram
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewCreateShader
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewDeleteProgram
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewDeleteShader
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetActiveUniform
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetProgramInfoLog
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetProgramiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetShaderInfoLog
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetShaderiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewShaderSource
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewValidateProgram
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetFragDataLocation
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform1dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform1f
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform1fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform1i
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform1iv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform1uiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform2dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform2fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform2iv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform2uiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform3dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform3fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform3iv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform3uiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform4dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform4fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform4iv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniform4uiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix2dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix2fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix2x3dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix2x3fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix2x4dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix2x4fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix3dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix3fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix3x2dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix3x2fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix3x4dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix3x4fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix4dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix4fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix4x2dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix4x2fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix4x3dv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewProgramUniformMatrix4x3fv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewBindBufferRange
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetActiveUniformBlockName
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetActiveUniformBlockiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetActiveUniformName
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewGetActiveUniformsiv
+vsShaderLib.obj : error LNK2001: unresolved external symbol __imp___glewUniformBlockBinding
+C:\Users\Rathyon\C++\AVT\dependencies\glew\lib\Release\glew32.lib : warning LNK4272: library machine type 'x86' conflicts with target machine type 'x64'
+C:\Users\Rathyon\C++\AVT\dependencies\freeglut\lib\freeglut.lib : warning LNK4272: library machine type 'x86' conflicts with target machine type 'x64'
+C:\Users\Rathyon\C++\AVT\projects\Micromachines\x64\Debug\Micromachines.exe : fatal error LNK1120: 97 unresolved externals

@@ -30,20 +30,16 @@
 
 #define CAPTION "AVT Light Demo"
 int WindowHandle = 0;
-int WinX = 640, WinY = 480;
+int WinX = 1280, WinY = 800;
 
 unsigned int FrameCount = 0;
 
-//movement
-bool move = false;
-float movX = 0.0f;
-
 VSShaderLib shader;
 
-const int objCount = 4;
+const int objCount = 5;
 
 struct MyMesh mesh[objCount];
-int objID=0; //id of the object mesh - to be used as index of mesh: mesh[objID] means the current mesh
+int objID=0;
 
 
 //External array storage defined in AVTmathLib.cpp
@@ -59,6 +55,12 @@ GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
+
+#define ORTHOGRAPHIC 1
+#define TOP 2
+#define CHASE 3
+
+int camera = 3;
 	
 // Camera Position
 float camX, camY, camZ;
@@ -75,6 +77,24 @@ long myTime,timebase = 0,frame = 0;
 char s[32];
 float lightPos[4] = {4.0f, 6.0f, 2.0f, 1.0f};
 
+//-------------------[ Movement ]-------------------//
+
+float carX = 2.0f;
+const float carY = 0.0f; //assuming no height changes in the track
+float carZ = 2.0f;
+
+float carOrientation = 0.0f;
+
+bool carForward = false;
+bool carReverse = false;
+bool carRotateLeft = false;
+bool carRotateRight = false;
+
+float carSpeed = 0.1f;
+float carAngularSpeed = 2.0f; //10 degrees
+
+
+
 void timer(int value)
 {
 	std::ostringstream oss;
@@ -89,7 +109,7 @@ void timer(int value)
 void refresh(int value)
 {
 	glutPostRedisplay();
-	glutTimerFunc(1000/60, refresh, 0);
+	glutTimerFunc(1000/60, refresh, 0); // 60 fps
 }
 
 // ------------------------------------------------------------
@@ -108,7 +128,28 @@ void changeSize(int w, int h) {
 	// set the projection matrix
 	ratio = (1.0f * w) / h;
 	loadIdentity(PROJECTION);
-	perspective(53.13f, ratio, 0.1f, 1000.0f);
+	if(camera == ORTHOGRAPHIC)
+		ortho(25, -25, -25, 25, 0.1f, 1000.f);
+	else if(camera == CHASE)
+		perspective(53.13f, ratio, 0.1f, 1000.0f);
+}
+
+// ------------------------------------------------------------
+//
+// Object movement functions
+//
+
+void animateCar() {
+	if (carForward) {
+		carX += carSpeed;
+	}
+	else if (carReverse) {
+		carX -= carSpeed;
+	}
+	if (carRotateLeft)
+		carOrientation += carAngularSpeed;
+	else if (carRotateRight)
+		carOrientation -= carAngularSpeed;
 }
 
 
@@ -139,13 +180,16 @@ void sendMatrices() {
 	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
 }
 
-void renderMesh() {
+void render() {
 
+	sendMaterials();
 	sendMatrices();
 
 	glBindVertexArray(mesh[objID].vao);
 	glDrawElements(mesh[objID].type, mesh[objID].numIndexes, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+
+	loadIdentity(MODEL); //reset model matrix
 
 }
 
@@ -159,64 +203,63 @@ void renderScene(void) {
 	loadIdentity(VIEW);
 	loadIdentity(MODEL);
 	// set the camera using a function similar to gluLookAt
-	lookAt(camX, camY, camZ, 0,0,0, 0,1,0);
+
+	if (camera == ORTHOGRAPHIC)
+		lookAt(0, 10, 0, 0, 0, 0, 0, 0, 1);
+	//else if(camera == TOP)
+	else if(camera == CHASE)
+		lookAt(camX, camY, camZ, carX, carY, carZ, 0, 1, 0);
+
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
 	//send the light position in eye coordinates
 
 	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
+	// Rafael: in other words the light is fixed in screen coords (effectively speaking)
 
 	float res[4];
-	multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space
+	multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space (Rafael: eye = view)
 	glUniform4fv(lPos_uniformId, 1, res);
 
 
 	pushMatrix(MODEL);
 
-	if (move) {
-		movX += 0.02f;
-	}
+	//--------[ Remember: the first transform is the last one coded! ]--------\\
 
 	//red X axis
 	objID = 0;
-	sendMaterials();
-
 	rotate(MODEL, 90, 0.0f, 0.0f, 1.0f);
-	translate(MODEL, 0.0f, -0.5f - movX, 0.0f);
-
-	renderMesh();
-	loadIdentity(MODEL); //clear matrix
+	translate(MODEL, 0.0f, -0.5f, 0.0f);
+	render();
 
 	//green Y axis
 	objID = 1;
-	sendMaterials();
-
-	translate(MODEL, 0.0f + movX, 0.5f, 0.0f);
-
-	renderMesh();
-	loadIdentity(MODEL);
+	translate(MODEL, 0.0f, 0.5f, 0.0f);
+	render();
 
 	//blue Z axis
 	objID = 2;
-	sendMaterials();
-
 	rotate(MODEL, 90, 1.0f, 0.0f, 0.0f);
-	translate(MODEL, 0.0f + movX, 0.5f, 0.0f);
-
-	renderMesh();
-	loadIdentity(MODEL);
+	translate(MODEL, 0.0f, 0.5f, 0.0f);
+	render();
 	
 	//table
 	objID = 3;
-	sendMaterials();
-
 	scale(MODEL, 50.0f, 0.5f, 50.0f);
-	translate(MODEL, -0.5f, -1.25f, -0.5f); //relative units? dafuq
+	translate(MODEL, -0.5f, -1.25f, -0.5f);
+	render();
 
-	renderMesh();
-	loadIdentity(MODEL);
+	//car
+	objID = 4;
 
+	animateCar();
+
+	translate(MODEL, carX, carY, carZ);
+	rotate(MODEL, carOrientation, 0, 1, 0);
+	scale(MODEL, 1.7f, 1, 1);
+	translate(MODEL, -0.5f, 0, -0.5f);
+	render();
 
 	popMatrix(MODEL);
 	glutSwapBuffers();
@@ -227,15 +270,7 @@ void renderScene(void) {
 // Events from the Keyboard
 //
 
-void moveForward() {
-	move = true;
-}
-
-void stop() {
-	move = false;
-}
-
-void processKeys(unsigned char key, int xx, int yy)
+void keyDown(unsigned char key, int xx, int yy)
 {
 	switch(key) {
 
@@ -246,10 +281,31 @@ void processKeys(unsigned char key, int xx, int yy)
 		case 'c': 
 			printf("Camera Spherical Coordinates (%f, %f, %f)\n", alpha, beta, r);
 			break;
+
+		//cameras
+		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(25, -25, -25, 25, 0.1f, 1000.f); break;
+		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX)/WinY, 0.1f, 1000.0f); break;
+		
+
+		//car movement
+		case 'w': if (!carReverse) carForward = true; break;
+		case 's': if (!carForward) carReverse = true; break;
+		case 'd': if (!carRotateLeft) carRotateRight = true; break;
+		case 'a': if (!carRotateRight) carRotateLeft = true; break;
+
+		//aliasing settings
 		case 'm': glEnable(GL_MULTISAMPLE); break;
 		case 'n': glDisable(GL_MULTISAMPLE); break;
-		case 'w': moveForward(); break;
-		case 's': stop(); break;
+	}
+}
+
+void keyUp(unsigned char key, int xx, int yy)
+{
+	switch (key) {
+		case 'w': carForward = false; break;
+		case 's': carReverse = false; break;
+		case 'd': carRotateRight = false; break;
+		case 'a': carRotateLeft = false; break;
 	}
 }
 
@@ -428,15 +484,25 @@ void init()
 	loadMaterials(ambBlue, diffBlue, specBlue, emissive, shininess, texCount);
 	createCylinder(1.0f, 0.1f, 20);
 
-	//table (need help with making colors
+	//table
 	float ambTable[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	float diffTable[] = { 119 / 255, 63 / 255, 22 / 255, 1.0f };
+	float diffTable[] = { 0.7f, 0.7f, 0.7f, 1.0f };
 	float specTable[] = { 0.8f, 0.8f, 0.8f, 1.0f };
-	shininess = 10.0f;
+	shininess = 500.0f;
 
 
 	objID = 3;
 	loadMaterials(ambTable, diffTable, specTable, emissive, shininess, texCount);
+	createCube();
+
+	//car hull
+	float ambCar[] = { 0,0,0,1.0f };
+	float diffCar[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+	float specCar[] = { 1,1,1,1 };
+	shininess = 700.0f;
+
+	objID = 4;
+	loadMaterials(ambCar, diffCar, specCar, emissive, shininess, texCount);
 	createCube();
 
 	// some GL settings
@@ -474,7 +540,8 @@ int main(int argc, char **argv) {
 	//glutIdleFunc(renderScene);
 
 //	Mouse and Keyboard Callbacks
-	glutKeyboardFunc(processKeys);
+	glutKeyboardFunc(keyDown);
+	glutKeyboardUpFunc(keyUp);
 	glutMouseFunc(processMouseButtons);
 	glutMotionFunc(processMouseMotion);
 	glutMouseWheelFunc ( mouseWheel ) ;
