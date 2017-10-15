@@ -60,7 +60,7 @@ GLint lPos_uniformId;
 #define TOP 2
 #define CHASE 3
 
-int camera = 3;
+int camera = CHASE;
 	
 // Camera Position
 float camX, camY, camZ;
@@ -69,7 +69,8 @@ float camX, camY, camZ;
 int startX, startY, tracking = 0;
 
 // Camera Spherical Coordinates
-float alpha = 39.0f, beta = 51.0f;
+//float alpha = 39.0f, beta = 51.0f;
+float alpha = -75.0f, beta = 40.0f;
 float r = 10.0f;
 
 // Frame counting and FPS computation
@@ -91,7 +92,7 @@ bool carRotateLeft = false;
 bool carRotateRight = false;
 
 float carSpeed = 0.1f;
-float carAngularSpeed = 2.0f; //10 degrees
+float carAngularSpeed = 2.0f; //2 degrees
 
 
 
@@ -140,16 +141,21 @@ void changeSize(int w, int h) {
 //
 
 void animateCar() {
+
 	if (carForward) {
 		carX += carSpeed;
+		camX += carSpeed;
 	}
 	else if (carReverse) {
 		carX -= carSpeed;
+		camX -= carSpeed;
 	}
-	if (carRotateLeft)
+	if (carRotateLeft) {
 		carOrientation += carAngularSpeed;
-	else if (carRotateRight)
+	}
+	else if (carRotateRight) {
 		carOrientation -= carAngularSpeed;
+	}
 }
 
 
@@ -204,11 +210,16 @@ void renderScene(void) {
 	loadIdentity(MODEL);
 	// set the camera using a function similar to gluLookAt
 
-	if (camera == ORTHOGRAPHIC)
-		lookAt(0, 10, 0, 0, 0, 0, 0, 0, 1);
+	if (camera == ORTHOGRAPHIC) {
+	lookAt(0, 10, 0, 0, 0, 0, 0, 0, 1);
+}
 	//else if(camera == TOP)
-	else if(camera == CHASE)
+	else if (camera == CHASE) {
 		lookAt(camX, camY, camZ, carX, carY, carZ, 0, 1, 0);
+		translate(VIEW, carX, carY, carZ);
+		rotate(VIEW, -carOrientation, 0.0f, 1.0f, 0.0f);
+		translate(VIEW, -carX, -carY, -carZ);
+	}
 
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
