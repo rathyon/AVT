@@ -36,7 +36,7 @@ unsigned int FrameCount = 0;
 
 VSShaderLib shader;
 
-const int objCount = 5;
+const int objCount = 8;
 
 struct MyMesh mesh[objCount];
 int objID=0;
@@ -69,14 +69,14 @@ float camX, camY, camZ;
 int startX, startY, tracking = 0;
 
 // Camera Spherical Coordinates
-//float alpha = 39.0f, beta = 51.0f;
-float alpha = -75.0f, beta = 40.0f;
+float alpha = 39.0f, beta = 51.0f;
+//float alpha = -75.0f, beta = 40.0f;
 float r = 10.0f;
 
 // Frame counting and FPS computation
 long myTime,timebase = 0,frame = 0;
 char s[32];
-float lightPos[4] = {4.0f, 6.0f, 2.0f, 1.0f};
+float lightPos[4] = {4.0f, 8.0f, 2.0f, 1.0f};
 
 //-------------------[ Movement ]-------------------//
 
@@ -270,6 +270,44 @@ void renderScene(void) {
 	rotate(MODEL, carOrientation, 0, 1, 0);
 	scale(MODEL, 1.7f, 1, 1);
 	translate(MODEL, -0.5f, 0, -0.5f);
+	render();
+
+	//cheerios
+	objID = 5;
+
+	for (int i = 0; i < 40;i++) {
+		rotate(MODEL, i*9.0f, 0, 1, 0);
+		translate(MODEL, 20, 0, 0);
+		render();
+	}
+
+	for (int i = 0; i < 30;i++) {
+		rotate(MODEL, i*12.0f, 0, 1, 0);
+		translate(MODEL, 10, 0, 0);
+		render();
+	}
+
+	//oranges
+	objID = 6;
+
+	translate(MODEL, -20, 0.5f, 0);
+	render();
+
+	translate(MODEL, -10, 0.5f, 0);
+	render();
+
+	translate(MODEL, 10, 0.5f, 0);
+	render();
+
+	translate(MODEL, 20, 0.5f, 0);
+	render();
+
+	//butter
+	objID = 7;
+
+	translate(MODEL, -15, 0, 0);
+	scale(MODEL, 2, 0.5, 1);
+
 	render();
 
 	popMatrix(MODEL);
@@ -514,6 +552,28 @@ void init()
 
 	objID = 4;
 	loadMaterials(ambCar, diffCar, specCar, emissive, shininess, texCount);
+	createCube();
+
+	//cheerios
+	float ambCheerios[] = { 0,0,0,1 };
+	float diffCheerios[] = { 1,0.7f,0,1 };
+	float specCheerios[] = { 1,1,1,1 };
+	shininess = 5.0f;
+
+	objID = 5;
+	loadMaterials(ambCheerios, diffCheerios, specCheerios, emissive, shininess, texCount);
+	createTorus(0.15f, 0.4f, 32, 16);
+
+	//oranges
+	float diffOranges[] = { 1, 0.5f, 0, 1 };
+	objID = 6;
+	loadMaterials(ambCheerios, diffOranges, specCheerios, emissive, shininess, texCount);
+	createSphere(1, 60);
+
+	//butter
+	float diffButter[] = { 1,1,0,1 };
+	objID = 7;
+	loadMaterials(ambCheerios, diffButter, specCheerios, emissive, shininess, texCount);
 	createCube();
 
 	// some GL settings
