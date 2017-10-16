@@ -30,7 +30,7 @@
 
 #define CAPTION "AVT Light Demo"
 int WindowHandle = 0;
-int WinX = 1280, WinY = 800;
+int WinX = 640, WinY = 400;
 
 unsigned int FrameCount = 0;
 
@@ -55,6 +55,9 @@ GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
+GLint dirLight_uniformId;
+
+GLint lightSwitch_uniformId;
 
 #define ORTHOGRAPHIC 1
 #define TOP 2
@@ -77,6 +80,10 @@ float r = 10.0f;
 long myTime,timebase = 0,frame = 0;
 char s[32];
 float lightPos[4] = {4.0f, 8.0f, 2.0f, 1.0f};
+
+float dirLight[4] = {1.0f, 1.0f, 1.0f, 0 };
+
+int lightSwitch = 0; // dir light on
 
 //-------------------[ Movement ]-------------------//
 
@@ -130,7 +137,7 @@ void changeSize(int w, int h) {
 	ratio = (1.0f * w) / h;
 	loadIdentity(PROJECTION);
 	if(camera == ORTHOGRAPHIC)
-		ortho(25, -25, -25, 25, 0.1f, 1000.f);
+		ortho(-25, 25, -25, 25, 0.1f, 1000.f);
 	else if(camera == CHASE)
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 }
@@ -211,7 +218,7 @@ void renderScene(void) {
 	// set the camera using a function similar to gluLookAt
 
 	if (camera == ORTHOGRAPHIC) {
-	lookAt(0, 10, 0, 0, 0, 0, 0, 0, 1);
+	lookAt(0, 10, 0, 0, 0, 0, 1, 0, 0);
 }
 	//else if(camera == TOP)
 	else if (camera == CHASE) {
@@ -232,6 +239,11 @@ void renderScene(void) {
 	float res[4];
 	multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space (Rafael: eye = view)
 	glUniform4fv(lPos_uniformId, 1, res);
+
+	multMatrixPoint(VIEW, dirLight, res);
+	glUniform4fv(dirLight_uniformId, 1, res);
+
+	glUniform1i(lightSwitch_uniformId, lightSwitch);
 
 
 	pushMatrix(MODEL);
@@ -332,8 +344,11 @@ void keyDown(unsigned char key, int xx, int yy)
 			break;
 
 		//cameras
-		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(25, -25, -25, 25, 0.1f, 1000.f); break;
+		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-25, 25, -25, 25, 0.1f, 1000.f); break;
 		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX)/WinY, 0.1f, 1000.0f); break;
+
+		//lights
+		case 'l': if (lightSwitch) lightSwitch = 0; else lightSwitch = 1; break;
 		
 
 		//car movement
@@ -474,6 +489,9 @@ GLuint setupShaders() {
 	vm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_viewModel");
 	normal_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_normal");
 	lPos_uniformId = glGetUniformLocation(shader.getProgramIndex(), "l_pos");
+
+	dirLight_uniformId = glGetUniformLocation(shader.getProgramIndex(), "dir_light");
+	lightSwitch_uniformId = glGetUniformLocation(shader.getProgramIndex(), "lightSwitch");
 	
 	printf("InfoLog for Hello World Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 	

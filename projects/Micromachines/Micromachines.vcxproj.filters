@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{cf135e65-2a1d-455d-83cb-63fe191ee6c6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AVTmathLib.cpp">
@@ -44,5 +47,13 @@
     <ClInclude Include="vsShaderLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\pointlight.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\pointlight.vert">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

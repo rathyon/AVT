@@ -6,6 +6,9 @@ uniform mat3 m_normal;
 
 uniform vec4 l_pos;
 
+uniform vec4 dir_light;
+uniform int lightSwitch;
+
 in vec4 position;
 in vec4 normal;    //por causa do gerador de geometria
 
@@ -20,7 +23,12 @@ void main () {
 	vec4 pos = m_viewModel * position;
 
 	DataOut.normal = normalize(m_normal * normal.xyz);
-	DataOut.lightDir = vec3(l_pos - pos);
+
+	if(lightSwitch == 1){
+		DataOut.lightDir = vec3(dir_light);
+	} else {
+		DataOut.lightDir = vec3(l_pos - pos);
+	}
 	DataOut.eye = vec3(-pos);
 
 	gl_Position = m_pvm * position;	
