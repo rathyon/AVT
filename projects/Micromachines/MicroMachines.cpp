@@ -22,6 +22,10 @@
 // GLUT is the toolkit to interface with the OS
 #include <GL/freeglut.h>
 
+// TinyLoader
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 // Use Very Simple Libs
 #include "VSShaderlib.h"
 #include "AVTmathLib.h"
@@ -36,7 +40,17 @@ unsigned int FrameCount = 0;
 
 VSShaderLib shader;
 
-const int objCount = 8;
+// red gizmo
+// green gizmo
+// blue gizmo
+// table
+// car
+// cheerio
+// orange
+// butter
+// loadtest obj
+
+const int objCount = 9;
 
 struct MyMesh mesh[objCount];
 int objID=0;
@@ -328,6 +342,12 @@ void renderScene(void) {
 	scale(MODEL, 2, 0.5, 1);
 
 	render();
+	//test object
+	/*objID = 8;
+
+	translate(MODEL, 0, 2, 0);
+	//scale(MODEL, 10, 10, 10);
+	render();*/
 
 	popMatrix(MODEL);
 	glutSwapBuffers();
@@ -511,6 +531,90 @@ GLuint setupShaders() {
 // Model loading and OpenGL setup
 //
 
+// Example of a loading of an OBJ using TinyLoader -> will have to setup buffers manually!
+bool LoadObj(const char* filename, const char* basepath = NULL, bool triangulate = true) {
+	std::cout << "Loading " << filename << std::endl;
+
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+
+	std::string err;
+	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename,
+		basepath, triangulate);
+
+	if (!ret) {
+		printf("Failed to load/parse .obj.\n");
+		return false;
+	}
+
+	//OPENGL stuff
+
+	int faceIndexCount = 0;
+
+	for (size_t i = 0; i < shapes.size(); i++) {
+		std::cout << "Shape " << i+1 << ":" << std::endl;
+		for (size_t j = 0; j < shapes[i].mesh.indices.size(); j++) {
+			std::cout << shapes[i].mesh.indices[j].vertex_index << std::endl;
+			faceIndexCount++;
+		}
+	}
+
+	mesh[objID].numIndexes = faceIndexCount;
+	glGenVertexArrays(1, &(mesh[objID].vao));
+	glBindVertexArray(mesh[objID].vao);
+
+	GLuint VboId[2];
+
+	float* vertices = &attrib.vertices[0];
+	float* normals = &attrib.normals[0];
+	float* texcoords = &attrib.texcoords[0];
+
+	unsigned int* faceIndex = new  unsigned int[faceIndexCount];
+
+	int aux = 0;
+
+	std::cout << "Assigning values to faceIndex" << std::endl;
+	for (size_t i = 0; i < shapes.size(); i++) {
+		for (size_t j = 0; j < shapes[i].mesh.indices.size(); j++) {
+			faceIndex[aux++] = shapes[i].mesh.indices[j].vertex_index;
+		}
+	}
+
+	for (size_t i = 0; i < faceIndexCount; i++) {
+		std::cout << faceIndex[i] << std::endl;
+	}
+
+
+	glGenBuffers(2, VboId);
+	glBindBuffer(GL_ARRAY_BUFFER, VboId[0]);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(attrib.vertices) + sizeof(attrib.normals) + sizeof(attrib.texcoords), NULL, GL_STATIC_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+		glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(normals), normals);
+		glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(normals), sizeof(texcoords), texcoords);
+
+	glEnableVertexAttribArray(VERTEX_COORD_ATTRIB);
+	glVertexAttribPointer(VERTEX_COORD_ATTRIB, 3, GL_FLOAT, 0, 0, 0);
+	glEnableVertexAttribArray(NORMAL_ATTRIB);
+	glVertexAttribPointer(NORMAL_ATTRIB, 3, GL_FLOAT, 0, 0, (void *)sizeof(vertices));
+	glEnableVertexAttribArray(TEXTURE_COORD_ATTRIB);
+	glVertexAttribPointer(TEXTURE_COORD_ATTRIB, 2, GL_FLOAT, 0, 0, (void *)(sizeof(vertices) + sizeof(normals)));
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboId[1]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * mesh[objID].numIndexes, faceIndex, GL_STATIC_DRAW);
+
+	delete(faceIndex);
+
+	glBindVertexArray(0);
+
+	mesh[objID].type = GL_TRIANGLES;
+
+	std::cout << "Model successfully loaded!" << std::endl;
+
+	return true;
+}
+
 void loadMaterials(float* ambient, float* diffuse, float* specular, float* emissive, float shininess, int texCount) {
 	memcpy(mesh[objID].mat.ambient, ambient, 4 * sizeof(float));
 	memcpy(mesh[objID].mat.diffuse, diffuse, 4 * sizeof(float));
@@ -601,6 +705,14 @@ void init()
 	objID = 7;
 	loadMaterials(ambCheerios, diffButter, specCheerios, emissive, shininess, texCount);
 	createCube();
+
+	//test obj
+	/*objID = 8;
+	loadMaterials(ambRed, diffRed, specRed, emissive, shininess, texCount);
+	if (!LoadObj("models/cube.obj", "models/", true)) {
+		std::cerr << "Error loading model!" << std::endl;
+	}*/
+
 
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
