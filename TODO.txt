@@ -1,7 +1,6 @@
 TODO:
 
 3rd Lab:
--Fix camera mouse rotation
 -Car movement (uniform acceleration) using vectors
 -Oranges:
 	uniform movement
