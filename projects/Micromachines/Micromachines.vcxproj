@@ -133,7 +133,7 @@
   <ItemGroup>
     <ClCompile Include="AVTmathLib.cpp" />
     <ClCompile Include="basic_geometry.cpp" />
-    <ClCompile Include="lightDemo.cpp" />
+    <ClCompile Include="MicroMachines.cpp" />
     <ClCompile Include="vsShaderLib.cpp" />
   </ItemGroup>
   <ItemGroup>

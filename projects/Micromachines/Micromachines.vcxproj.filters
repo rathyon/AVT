@@ -24,10 +24,10 @@
     <ClCompile Include="basic_geometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="lightDemo.cpp">
+    <ClCompile Include="vsShaderLib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vsShaderLib.cpp">
+    <ClCompile Include="MicroMachines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

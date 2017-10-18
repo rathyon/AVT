@@ -1,0 +1,26 @@
+TODO:
+
+3rd Lab:
+-Fix camera mouse rotation
+-Car movement (uniform acceleration) using vectors
+-Oranges:
+	uniform movement
+	rotating
+	different speeds
+	increasing speed over time
+	random spawing and de-spawing
+
+4th Lab:
+-directional light
+-6 point lights (pg 376 redbook)
+-2 spotlights
+-model import
+
+-------[Assignment]-------
+
+-collision detection (can use spheres)
+-apply 2 textures to table
+-pausing
+-game mechanisms
+-HUD (complicated)
+	
