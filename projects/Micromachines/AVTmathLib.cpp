@@ -384,6 +384,36 @@ float length(float *a) {
 	return(sqrt(a[0] * a[0]  +  a[1] * a[1]  +  a[2] * a[2]));
 
 }
+
+void rotate(float *vec, float angle, float *axis) {
+	float radAngle = DegToRad(angle);
+
+	float cosSum[3];
+
+	cosSum[0] = vec[0] * cos(radAngle);
+	cosSum[1] = vec[1] * cos(radAngle);
+	cosSum[2] = vec[2] * cos(radAngle);
+
+	float AxV[3];
+
+	crossProduct(axis, vec, AxV);
+
+	AxV[0] *= sin(radAngle);
+	AxV[1] *= sin(radAngle);
+	AxV[2] *= sin(radAngle);
+
+	float AAV[3];
+
+	AAV[0] = axis[0] * dotProduct(axis, vec) * (1 - cos(radAngle));
+	AAV[1] = axis[1] * dotProduct(axis, vec) *(1 - cos(radAngle));
+	AAV[2] = axis[2] * dotProduct(axis, vec) *(1 - cos(radAngle));
+
+	vec[0] = cosSum[0] + AxV[0] + AAV[0];
+	vec[1] = cosSum[1] + AxV[1] + AAV[1];
+	vec[2] = cosSum[2] + AxV[2] + AAV[2];
+
+}
+
 // Computes derived matrices
 void computeDerivedMatrix(ComputedMatrixTypes aType) {
 	

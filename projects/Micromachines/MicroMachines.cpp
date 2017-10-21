@@ -80,7 +80,7 @@ GLint lightSwitch_uniformId;
 int camera = CHASE;
 	
 // Camera Position
-float camX, camY, camZ;
+float cam[3];
 
 // Mouse Tracking Variables
 int startX, startY, tracking = 0;
@@ -95,26 +95,43 @@ long myTime,timebase = 0,frame = 0;
 char s[32];
 float lightPos[4] = {4.0f, 8.0f, 2.0f, 1.0f};
 
-float dirLight[4] = {1.0f, 1.0f, 1.0f, 0 };
+float dirLight[4] = {0.0f, 1.0f, 1.0f, 0 };
 
 int lightSwitch = 0; // dir light on
 
+// Game Variables
+
+bool paused = false;
+
 //-------------------[ Movement ]-------------------//
-// CHANGE TO USE 3D VECTORS
 
-float carX = 2.0f;
-const float carY = 0.0f; //assuming no height changes in the track
-float carZ = 2.0f;
+//------ CAR -------//
+float carPos[3] = { 2.0f, 0.0f, 2.0f };
 
-float carOrientation = 0.0f;
+float carSpeed[3] = { 0.0f , 0.0f, 0.0f };
+float carReverseVec[3] = { 0.03f, 0.0f, 0.0f };
+
+float carAngle = 0.0f;
 
 bool carForward = false;
 bool carReverse = false;
 bool carRotateLeft = false;
 bool carRotateRight = false;
 
-float carSpeed = 0.1f;
+float carAcceleration[3] = { 0.005f, 0.0f, 0.0f };
 float carAngularSpeed = 2.0f; //2 degrees
+float carRotationAxis[3] = { 0,1,0 }; // rotate "left and right"
+
+//------ ORANGE ------//
+
+float orangePos[4][3] = { { -20.0f, 1, 0 },{ -10.0f, 1, 0 }, { 10.0f, 1, 0 },{ 20.0f, 1, 0 } };
+
+float orangeSpeed[4][3] = { { 0, 0, -0.005f },{ 0, 0, 0.003f },{ 0, 0, 0.001f },{ 0, 0, -0.004f } };
+
+float orangeAcceleration[4][3] = { { 0, 0, -0.00005f },{ 0, 0, 0.00003f },{ 0, 0, 0.00001f },{ 0, 0, -0.00004f } };
+
+float orangeAngle = 0.0f;
+float orangeAngularSpeed = 1.0f;
 
 
 
@@ -164,22 +181,67 @@ void changeSize(int w, int h) {
 // Object movement functions
 //
 
+
+//DONE
 void animateCar() {
 
 	if (carForward) {
-		carX += carSpeed;
-		camX += carSpeed;
+		if(length(carSpeed) < 0.1f)
+			add(carSpeed, carAcceleration, carSpeed); // increase speed
+		add(carPos, carSpeed, carPos); // move car
+		add(cam, carSpeed, cam); // move camera with car
 	}
 	else if (carReverse) {
-		carX -= carSpeed;
-		camX -= carSpeed;
+		subtract(carReverseVec, carPos, carPos); // move car
+		subtract(carReverseVec, cam, cam); // move camera with car
 	}
+
 	if (carRotateLeft) {
-		carOrientation += carAngularSpeed;
+		carAngle += carAngularSpeed;
+		rotate(carSpeed, carAngularSpeed, carRotationAxis);
+		rotate(carAcceleration, carAngularSpeed, carRotationAxis);
 	}
 	else if (carRotateRight) {
-		carOrientation -= carAngularSpeed;
+		carAngle -= carAngularSpeed;
+		rotate(carSpeed, -carAngularSpeed, carRotationAxis);
+		rotate(carAcceleration, -carAngularSpeed, carRotationAxis);
 	}
+}
+
+void respawnOrange(int i) {
+
+	float RNG = static_cast <float> (rand()) / static_cast <float> (RAND_MAX); // between 0.0 and 1.0
+
+	RNG *= 2.0f;
+
+	RNG -= 1.0f;
+
+	RNG *= 25.0f;
+
+	std::cout << RNG << std::endl;
+
+	orangePos[i][0] = RNG;
+	orangePos[i][1] = 1.0f;
+	orangePos[i][2] = 0.0f;
+
+}
+
+void animateOranges() {
+
+	for (int i = 0; i < 4; i++) {
+
+		if (orangePos[i][2] > 25 || orangePos[i][2] < -25) {
+			orangePos[i][1] = -100.0f;
+			//glutTimerFunc(2000, respawnOrange, i);
+			respawnOrange(i);
+		}
+		else {
+			add(orangeSpeed[i], orangeAcceleration[i], orangeSpeed[i]);
+			add(orangePos[i], orangeSpeed[i], orangePos[i]);
+			orangeAngle += orangeAngularSpeed;
+		}
+	}
+
 }
 
 
@@ -243,10 +305,10 @@ void renderScene(void) {
 	}
 
 	else if (camera == CHASE) {
-		lookAt(camX, camY, camZ, carX, carY, carZ, 0, 1, 0);
-		translate(VIEW, carX, carY, carZ);
-		rotate(VIEW, -carOrientation, 0.0f, 1.0f, 0.0f);
-		translate(VIEW, -carX, -carY, -carZ);
+		lookAt(cam[0], cam[1], cam[2], carPos[0], carPos[1], carPos[2], 0, 1, 0);
+		translate(VIEW, carPos[0], carPos[1], carPos[2]);
+		rotate(VIEW, -carAngle, 0.0f, 1.0f, 0.0f);
+		translate(VIEW, -carPos[0], -carPos[1], -carPos[2]);
 	}
 
 	// use our shader
@@ -255,7 +317,6 @@ void renderScene(void) {
 	//send the light position in eye coordinates
 
 	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
-	// Rafael: in other words the light is fixed in screen coords (effectively speaking)
 
 	float res[4];
 	multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space (Rafael: eye = view)
@@ -297,10 +358,11 @@ void renderScene(void) {
 	//car
 	objID = 4;
 
-	animateCar();
+	if(!paused)
+		animateCar();
 
-	translate(MODEL, carX, carY, carZ);
-	rotate(MODEL, carOrientation, 0, 1, 0);
+	translate(MODEL, carPos[0], carPos[1], carPos[2]);
+	rotate(MODEL, carAngle, 0, 1, 0);
 	scale(MODEL, 1.7f, 1, 1);
 	translate(MODEL, -0.5f, 0, -0.5f);
 	render();
@@ -323,16 +385,23 @@ void renderScene(void) {
 	//oranges
 	objID = 6;
 
-	translate(MODEL, -20, 0.5f, 0);
+	if(!paused)
+		animateOranges();
+
+	translate(MODEL, orangePos[0][0], orangePos[0][1], orangePos[0][2]);
+	rotate(MODEL, -orangeAngle, 1, 0, 0);
 	render();
 
-	translate(MODEL, -10, 0.5f, 0);
+	translate(MODEL, orangePos[1][0], orangePos[1][1], orangePos[1][2]);
+	rotate(MODEL, orangeAngle, 1, 0, 0);
 	render();
 
-	translate(MODEL, 10, 0.5f, 0);
+	translate(MODEL, orangePos[2][0], orangePos[2][1], orangePos[2][2]);
+	rotate(MODEL, orangeAngle, 1, 0, 0);
 	render();
 
-	translate(MODEL, 20, 0.5f, 0);
+	translate(MODEL, orangePos[3][0], orangePos[3][1], orangePos[3][2]);
+	rotate(MODEL, -orangeAngle, 1, 0, 0);
 	render();
 
 	//butter
@@ -388,13 +457,19 @@ void keyDown(unsigned char key, int xx, int yy)
 		//aliasing settings
 		case 'm': glEnable(GL_MULTISAMPLE); break;
 		case 'n': glDisable(GL_MULTISAMPLE); break;
+
+		//game controls
+		case 'p': paused = !paused; break;
 	}
 }
 
 void keyUp(unsigned char key, int xx, int yy)
 {
 	switch (key) {
-		case 'w': carForward = false; break;
+		case 'w': 
+			carForward = false; 
+			carSpeed[0] = 0; carSpeed[1] = 0; carSpeed[2] = 0;
+			break;
 		case 's': carReverse = false; break;
 		case 'd': carRotateRight = false; break;
 		case 'a': carRotateLeft = false; break;
@@ -469,9 +544,9 @@ void processMouseMotion(int xx, int yy)
 			rAux = 0.1f;
 	}
 
-	camX = rAux * sin(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) + carX;
-	camZ = rAux * cos(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) + carY;
-	camY = rAux *   						       sin(betaAux * 3.14f / 180.0f) + carZ;
+	cam[0] = rAux * sin(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) + carPos[0];
+	cam[1] = rAux * cos(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) + carPos[1];
+	cam[2] = rAux *   						       sin(betaAux * 3.14f / 180.0f) + carPos[2];
 
 //  uncomment this if not using an idle func
 //	glutPostRedisplay();
@@ -484,9 +559,9 @@ void mouseWheel(int wheel, int direction, int x, int y) {
 	if (r < 0.1f)
 		r = 0.1f;
 
-	camX = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camZ = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camY = r *   						     sin(beta * 3.14f / 180.0f);
+	cam[0] = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
+	cam[1] = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
+	cam[2] = r *   						     sin(beta * 3.14f / 180.0f);
 
 //  uncomment this if not using an idle func
 //	glutPostRedisplay();
@@ -627,9 +702,9 @@ void loadMaterials(float* ambient, float* diffuse, float* specular, float* emiss
 void init()
 {
 	// set the camera position based on its spherical coordinates
-	camX = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camZ = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camY = r *   						     sin(beta * 3.14f / 180.0f);
+	cam[0] = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
+	cam[1] = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
+	cam[2] = r *   						     sin(beta * 3.14f / 180.0f);
 
 	//create 3 cylinders for gizmo
 
