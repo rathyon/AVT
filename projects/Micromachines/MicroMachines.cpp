@@ -31,8 +31,9 @@
 #include "AVTmathLib.h"
 #include "VertexAttrDef.h"
 #include "basic_geometry.h"
+#include "TGA.h"
 
-#define CAPTION "AVT Light Demo"
+#define CAPTION "MicroMachines™"
 int WindowHandle = 0;
 int WinX = 640, WinY = 400;
 
@@ -68,10 +69,6 @@ extern float mNormal3x3[9];
 GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
-GLint lPos_uniformId;
-GLint dirLight_uniformId;
-
-GLint lightSwitch_uniformId;
 
 #define ORTHOGRAPHIC 1
 #define TOP 2
@@ -86,18 +83,42 @@ float cam[3];
 int startX, startY, tracking = 0;
 
 // Camera Spherical Coordinates
-float alpha = 39.0f, beta = 51.0f;
-//float alpha = -75.0f, beta = 40.0f;
+//float alpha = 39.0f, beta = 51.0f;
+float alpha = -90.0f, beta = 0.0f;
 float r = 10.0f;
+
+float camAngle = 0.0f;
+float camPitch = 0.0f;
 
 // Frame counting and FPS computation
 long myTime,timebase = 0,frame = 0;
 char s[32];
-float lightPos[4] = {4.0f, 8.0f, 2.0f, 1.0f};
 
-float dirLight[4] = {0.0f, 1.0f, 1.0f, 0 };
+//------------------[ LIGHTS ]----------------------//
 
-int lightSwitch = 0; // dir light on
+float red[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+float green[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+float blue[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+float purple[4] = { 1.0f, 0.0f, 1.0f, 1.0f };
+float cyan[4] = { 0.0f, 1.0f, 1.0f, 1.0f };
+float yellow[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
+
+float dirLightDirection[4] = { 1.0f, 1.0f, 0.0f, 0.0f };
+float dirLightColor[4] = { 1.0f, 1.0f , 1.0f , 1.0f};
+
+float candles[6][4];
+
+float redCandle[4] = { -20.0f, 10.0f, 20.0f, 1.0f };
+float greenCandle[4] = { 20.0f, 10.0f, 20.0f, 1.0f };
+float blueCandle[4] = { -20.0f, 10.0f, -20.0f, 1.0f };
+float purpleCandle[4] = { 20.0f, 10.0f, -20.0f, 1.0f };
+float cyanCandle[4] = { 0.0f, 10.0f, 0.0f, 1.0f };
+float yellowCandle[4] = { 0.0f, 10.0f, 10.0f, 1.0f };
+
+float candleAttenuation = 0.3f;
+
+bool dirLightOn = true;
+bool candlesOn = false;
 
 // Game Variables
 
@@ -122,6 +143,8 @@ float carAcceleration[3] = { 0.005f, 0.0f, 0.0f };
 float carAngularSpeed = 2.0f; //2 degrees
 float carRotationAxis[3] = { 0,1,0 }; // rotate "left and right"
 
+float carRadius = 0.85f;
+
 //------ ORANGE ------//
 
 float orangePos[4][3] = { { -20.0f, 1, 0 },{ -10.0f, 1, 0 }, { 10.0f, 1, 0 },{ 20.0f, 1, 0 } };
@@ -133,7 +156,15 @@ float orangeAcceleration[4][3] = { { 0, 0, -0.00005f },{ 0, 0, 0.00003f },{ 0, 0
 float orangeAngle = 0.0f;
 float orangeAngularSpeed = 1.0f;
 
+float orangeRadius = 0.8f;
 
+//------------------[ TEXTURES ]------------------//
+
+GLint texMode_uniformId;
+GLint tex_loc1;
+GLint tex_loc2;
+
+GLuint TextureArray[2];
 
 void timer(int value)
 {
@@ -181,15 +212,28 @@ void changeSize(int w, int h) {
 // Object movement functions
 //
 
-
-//DONE
 void animateCar() {
 
+	float res[4];
+	float distance = 0.0f;
+
+	bool collided = false;
+
 	if (carForward) {
-		if(length(carSpeed) < 0.1f)
-			add(carSpeed, carAcceleration, carSpeed); // increase speed
-		add(carPos, carSpeed, carPos); // move car
-		add(cam, carSpeed, cam); // move camera with car
+
+		for (int i = 0; i < 4; i++) {
+			subtract(carPos, orangePos[i], res);
+			distance = length(res);
+			if (distance <= carRadius + orangeRadius)
+				collided = true;
+		}
+
+		if (!collided) {
+			if (length(carSpeed) < 0.2f)
+				add(carSpeed, carAcceleration, carSpeed); // increase speed
+			add(carPos, carSpeed, carPos); // move car
+			add(cam, carSpeed, cam); // move camera with car
+		}
 	}
 	else if (carReverse) {
 		subtract(carReverseVec, carPos, carPos); // move car
@@ -200,11 +244,13 @@ void animateCar() {
 		carAngle += carAngularSpeed;
 		rotate(carSpeed, carAngularSpeed, carRotationAxis);
 		rotate(carAcceleration, carAngularSpeed, carRotationAxis);
+		rotate(carReverseVec, carAngularSpeed, carRotationAxis);
 	}
 	else if (carRotateRight) {
 		carAngle -= carAngularSpeed;
 		rotate(carSpeed, -carAngularSpeed, carRotationAxis);
 		rotate(carAcceleration, -carAngularSpeed, carRotationAxis);
+		rotate(carReverseVec, -carAngularSpeed, carRotationAxis);
 	}
 }
 
@@ -218,7 +264,7 @@ void respawnOrange(int i) {
 
 	RNG *= 25.0f;
 
-	std::cout << RNG << std::endl;
+	//std::cout << RNG << std::endl;
 
 	orangePos[i][0] = RNG;
 	orangePos[i][1] = 1.0f;
@@ -249,6 +295,117 @@ void animateOranges() {
 //
 // Render stufff
 //
+
+void sendLights() {
+
+	GLint loc;
+	float res[4];
+
+	// Directional Light
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[0].position");
+	multMatrixPoint(VIEW, dirLightDirection, res);   //Not doing this = light position is in camera coords
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[0].color");
+	glUniform4fv(loc, 1, dirLightColor);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[0].isEnabled");
+	glUniform1i(loc, dirLightOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[0].isPointLight");
+	glUniform1i(loc, false);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[0].isSpotlight");
+	glUniform1i(loc, false);
+
+	// Red Candle
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[1].position");
+	multMatrixPoint(VIEW, redCandle, res);   //Not doing this = light position is in camera coords
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[1].color");
+	glUniform4fv(loc, 1, red);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[1].isEnabled");
+	glUniform1i(loc, candlesOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[1].isPointLight");
+	glUniform1i(loc, true); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[1].isSpotlight");
+	glUniform1i(loc, false); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[1].linearAttenuation");
+	glUniform1f(loc, candleAttenuation);
+	/*
+	// Green Candle
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[2].position");
+	multMatrixPoint(VIEW, greenCandle, res);
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[2].color");
+	glUniform4fv(loc, 1, green);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[2].isEnabled");
+	glUniform1i(loc, candlesOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[2].isPointLight");
+	glUniform1i(loc, true); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[2].isSpotlight");
+	glUniform1i(loc, false); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[2].linearAttenuation");
+	glUniform1f(loc, candleAttenuation);
+
+	// Blue Candle
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[3].position");
+	multMatrixPoint(VIEW, blueCandle, res);
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[3].color");
+	glUniform4fv(loc, 1, blue);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[3].isEnabled");
+	glUniform1i(loc, candlesOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[3].isPointLight");
+	glUniform1i(loc, true); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[3].isSpotlight");
+	glUniform1i(loc, false); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[3].linearAttenuation");
+	glUniform1f(loc, candleAttenuation);
+
+	// Purple Candle
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[4].position");
+	multMatrixPoint(VIEW, purpleCandle, res);
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[4].color");
+	glUniform4fv(loc, 1, purple);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[4].isEnabled");
+	glUniform1i(loc, candlesOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[4].isPointLight");
+	glUniform1i(loc, true); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[4].isSpotlight");
+	glUniform1i(loc, false); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[4].linearAttenuation");
+	glUniform1f(loc, candleAttenuation);
+
+	// Cyan Candle
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[5].position");
+	multMatrixPoint(VIEW, cyanCandle, res);
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[5].color");
+	glUniform4fv(loc, 1, cyan);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[5].isEnabled");
+	glUniform1i(loc, candlesOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[5].isPointLight");
+	glUniform1i(loc, true); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[5].isSpotlight");
+	glUniform1i(loc, false); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[5].linearAttenuation");
+	glUniform1f(loc, candleAttenuation);
+
+	// Yellow Candle
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[6].position");
+	multMatrixPoint(VIEW, yellowCandle, res); 
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[6].color");
+	glUniform4fv(loc, 1, yellow);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[6].isEnabled");
+	glUniform1i(loc, candlesOn);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[6].isPointLight");
+	glUniform1i(loc, true); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[6].isSpotlight");
+	glUniform1i(loc, false); //false
+	loc = glGetUniformLocation(shader.getProgramIndex(), "Lights[6].linearAttenuation");
+	glUniform1f(loc, candleAttenuation);
+
+	*/
+}
 
 void sendMaterials() {
 
@@ -307,30 +464,32 @@ void renderScene(void) {
 	else if (camera == CHASE) {
 		lookAt(cam[0], cam[1], cam[2], carPos[0], carPos[1], carPos[2], 0, 1, 0);
 		translate(VIEW, carPos[0], carPos[1], carPos[2]);
-		rotate(VIEW, -carAngle, 0.0f, 1.0f, 0.0f);
+		rotate(VIEW, camPitch, 0, 0, 1);
+		rotate(VIEW, -carAngle + camAngle, 0.0f, 1.0f, 0.0f);
 		translate(VIEW, -carPos[0], -carPos[1], -carPos[2]);
 	}
 
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
-	//send the light position in eye coordinates
+	sendLights();
 
-	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
+	// TEXTURES
 
-	float res[4];
-	multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space (Rafael: eye = view)
-	glUniform4fv(lPos_uniformId, 1, res);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
 
-	multMatrixPoint(VIEW, dirLight, res);
-	glUniform4fv(dirLight_uniformId, 1, res);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
 
-	glUniform1i(lightSwitch_uniformId, lightSwitch);
-
+	glUniform1i(tex_loc1, 0);
+	glUniform1i(tex_loc2, 1);
 
 	pushMatrix(MODEL);
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
+
+	glUniform1i(texMode_uniformId, 0);
 
 	//red X axis
 	objID = 0;
@@ -353,7 +512,10 @@ void renderScene(void) {
 	objID = 3;
 	scale(MODEL, 50.0f, 0.5f, 50.0f);
 	translate(MODEL, -0.5f, -1.25f, -0.5f);
+	glUniform1i(texMode_uniformId, 1);
 	render();
+
+	glUniform1i(texMode_uniformId, 0);
 
 	//car
 	objID = 4;
@@ -419,6 +581,7 @@ void renderScene(void) {
 	render();*/
 
 	popMatrix(MODEL);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glutSwapBuffers();
 }
 
@@ -435,7 +598,7 @@ void keyDown(unsigned char key, int xx, int yy)
 			glutLeaveMainLoop();
 			break;
 
-		case 'c': 
+		case 'o': 
 			printf("Camera Spherical Coordinates (%f, %f, %f)\n", alpha, beta, r);
 			break;
 
@@ -445,7 +608,10 @@ void keyDown(unsigned char key, int xx, int yy)
 		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
 
 		//lights
-		case 'l': if (lightSwitch) lightSwitch = 0; else lightSwitch = 1; break;
+		case 'l': 
+			dirLightOn = !dirLightOn; break;
+		case 'c':
+			candlesOn = !candlesOn; break;
 		
 
 		//car movement
@@ -525,14 +691,17 @@ void processMouseMotion(int xx, int yy)
 	if (tracking == 1) {
 
 
-		alphaAux = alpha + deltaX;
+		/*alphaAux = alpha + deltaX;
 		betaAux = beta + deltaY;
 
 		if (betaAux > 85.0f)
 			betaAux = 85.0f;
 		else if (betaAux < -85.0f)
 			betaAux = -85.0f;
-		rAux = r;
+		rAux = r;*/
+
+		camAngle -= deltaX*0.002f;
+		camPitch += deltaY*0.002f;
 	}
 	// right mouse button: zoom
 	else if (tracking == 2) {
@@ -544,9 +713,9 @@ void processMouseMotion(int xx, int yy)
 			rAux = 0.1f;
 	}
 
-	cam[0] = rAux * sin(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) + carPos[0];
-	cam[1] = rAux * cos(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) + carPos[1];
-	cam[2] = rAux *   						       sin(betaAux * 3.14f / 180.0f) + carPos[2];
+	/*cam[0] = rAux * sin(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) ;
+	cam[1] = rAux * cos(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f) ;
+	cam[2] = rAux *   						       sin(betaAux * 3.14f / 180.0f) ;*/
 
 //  uncomment this if not using an idle func
 //	glutPostRedisplay();
@@ -591,12 +760,15 @@ GLuint setupShaders() {
 	pvm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_pvm");
 	vm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_viewModel");
 	normal_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_normal");
-	lPos_uniformId = glGetUniformLocation(shader.getProgramIndex(), "l_pos");
 
-	dirLight_uniformId = glGetUniformLocation(shader.getProgramIndex(), "dir_light");
-	lightSwitch_uniformId = glGetUniformLocation(shader.getProgramIndex(), "lightSwitch");
+	// texMode = on or off
+	texMode_uniformId = glGetUniformLocation(shader.getProgramIndex(), "texMode");
+	tex_loc1 = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
+	tex_loc2 = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
 	
 	printf("InfoLog for Hello World Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
+
+	//std::cin.ignore(); //in case of crash
 	
 	return(shader.isProgramLinked());
 }
@@ -702,9 +874,17 @@ void loadMaterials(float* ambient, float* diffuse, float* specular, float* emiss
 void init()
 {
 	// set the camera position based on its spherical coordinates
-	cam[0] = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	cam[1] = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	cam[2] = r *   						     sin(beta * 3.14f / 180.0f);
+	/*cam[0] = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f) + carPos[0];
+	cam[1] = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f) + carPos[1];
+	cam[2] = r *   						     sin(beta * 3.14f / 180.0f) + carPos[2];*/
+
+	cam[0] = carPos[0] - 6.0f;
+	cam[1] = carPos[1] + 6.0f;
+	cam[2] = carPos[2];
+
+	glGenTextures(2, TextureArray);
+	TGA_Texture(TextureArray, "textures/kt_rock_1f_shiny.tga", 0);
+	TGA_Texture(TextureArray, "textures/wall_512_1_05.tga", 1);
 
 	//create 3 cylinders for gizmo
 

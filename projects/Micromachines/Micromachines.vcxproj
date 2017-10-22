@@ -134,12 +134,14 @@
     <ClCompile Include="AVTmathLib.cpp" />
     <ClCompile Include="basic_geometry.cpp" />
     <ClCompile Include="MicroMachines.cpp" />
+    <ClCompile Include="TGA.cpp" />
     <ClCompile Include="vsShaderLib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AVTmathLib.h" />
     <ClInclude Include="basic_geometry.h" />
     <ClInclude Include="cube.h" />
+    <ClInclude Include="TGA.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="VertexAttrDef.h" />
     <ClInclude Include="vsShaderLib.h" />

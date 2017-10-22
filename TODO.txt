@@ -1,13 +1,5 @@
 TODO:
 
-3rd Lab:
--Oranges:
-	uniform movement
-	rotating
-	different speeds
-	increasing speed over time
-	random spawning and de-spawning
-
 4th Lab:
 -directional light
 -6 point lights (pg 376 redbook)
