@@ -1,8 +1,7 @@
 #version 330
 
-//uniform sampler2D texmap1;
-//uniform sampler2D texmap2;
-//uniform int texMode;
+uniform sampler2D texmap1;
+uniform int texMode;
 
 out vec4 colorOut;
 
@@ -28,7 +27,7 @@ struct LightProperties {
 	float linearAttenuation;
 };
 
-const int numLights = 0; // HAVE TO SET THIS MANUALLY
+const int numLights = 1; // HAVE TO SET THIS MANUALLY
 
 uniform LightProperties Lights[numLights];
 
@@ -89,9 +88,9 @@ void main() {
 
 	if(texMode == 1){
 		texel1 = texture(texmap1, DataIn.tex_coord);
-		texel2 = texture(texmap2, DataIn.tex_coord);
+		//texel2 = texture(texmap2, DataIn.tex_coord);
 
-		colorOut = max(strength * texel1 * texel2 + reflectedLight, 0.01*texel1*texel2);
+		colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
 	} else {
 
 	vec4 rgb = min(scatteredLight + reflectedLight, vec4(1.0));

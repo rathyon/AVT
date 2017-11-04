@@ -33,15 +33,24 @@
 #include "basic_geometry.h"
 #include "TGA.h"
 
+#define PI   3.14159265358979323846f
+
 #define CAPTION "MicroMachines™"
 int WindowHandle = 0;
 int WinX = 640, WinY = 400;
 
 unsigned int FrameCount = 0;
 
-VSShaderLib shader;
+// Frame counting and FPS computation
+long myTime, timebase = 0, frame = 0;
+char s[32];
 
-const int objCount = 1;
+VSShaderLib shader;
+GLuint pid;
+
+// table = 0
+// test cube = 1
+const int objCount = 2;
 
 struct MyMesh mesh[objCount];
 int objID=0;
@@ -59,30 +68,39 @@ extern float mNormal3x3[9];
 GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
+	
+//------------------[ CAMERAS ]------------------//
 
 #define ORTHOGRAPHIC 1
 #define TOP 2
 #define CHASE 3
 
-int camera = TOP;
-	
-// Camera Position
-float cam[3];
+int camera = CHASE;
+
+float top[3];
+float camX, camY, camZ;
+float alpha = 0.0f;
+float beta = 0.0f;
+float r = 5.0f;
 
 // Mouse Tracking Variables
 int startX, startY, tracking = 0;
 
-// Frame counting and FPS computation
-long myTime,timebase = 0,frame = 0;
-char s[32];
+//------------------[ CAR ]------------------//
+
+float carPos[3];
+
+//------------------[ LIGHTS ]------------------//
+
+float dirLight[4] = { 0.5f, 1.0f, 0.0f, 0.0f };
+float dirLightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 //------------------[ TEXTURES ]------------------//
 
 GLint texMode_UID;
 GLint tex_1_loc;
-GLint tex_2_loc;
 
-GLuint TextureArray[2];
+GLuint TextureArray[1];
 
 //-----------------------------------------------//
 
@@ -116,11 +134,13 @@ void changeSize(int w, int h) {
 		h = 1;
 	// set the viewport to be the entire window
 	glViewport(0, 0, w, h);
+	WinX = w;
+	WinY = h;
 	// set the projection matrix
 	ratio = (1.0f * w) / h;
 	loadIdentity(PROJECTION);
 	if(camera == ORTHOGRAPHIC)
-		ortho(-25, 25, -25, 25, 0.1f, 1000.f);
+		ortho(-50, 50, -50, 50, 0.1f, 1000.f);
 	else if (camera == TOP)
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 	else if(camera == CHASE)
@@ -142,36 +162,40 @@ void sendLights() {
 
 	GLint loc;
 	float res[4];
-	
+
+	loc = glGetUniformLocation(pid, "Lights[0].isEnabled");
+	glUniform1i(loc, true);
+	loc = glGetUniformLocation(pid, "Lights[0].isPointLight");
+	glUniform1i(loc, false);
+	loc = glGetUniformLocation(pid, "Lights[0].position");
+	glUniform4fv(loc, 1, dirLight);
+	loc = glGetUniformLocation(pid, "Lights[0].color");
+	glUniform4fv(loc, 1, dirLightColor);
+
 }
 
-void sendMaterials() {
+void render() {
 
 	GLint loc;
 
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	// send materials
+	loc = glGetUniformLocation(pid, "mat.ambient");
 	glUniform4fv(loc, 1, mesh[objID].mat.ambient);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	loc = glGetUniformLocation(pid, "mat.diffuse");
 	glUniform4fv(loc, 1, mesh[objID].mat.diffuse);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	loc = glGetUniformLocation(pid, "mat.specular");
 	glUniform4fv(loc, 1, mesh[objID].mat.specular);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	loc = glGetUniformLocation(pid, "mat.shininess");
 	glUniform1f(loc, mesh[objID].mat.shininess);
-}
 
-void sendMatrices() {
+	//send matrices
 	computeDerivedMatrix(PROJ_VIEW_MODEL);
 	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
 	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
 	computeNormalMatrix3x3();
 	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-}
 
-void render() {
-
-	sendMaterials();
-	sendMatrices();
-
+	//draw
 	glBindVertexArray(mesh[objID].vao);
 	glDrawElements(mesh[objID].type, mesh[objID].numIndexes, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
@@ -182,7 +206,7 @@ void render() {
 
 void renderScene(void) {
 
-	//GLint loc;
+	pid = shader.getProgramIndex();
 
 	FrameCount++;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -192,19 +216,15 @@ void renderScene(void) {
 	// set the camera using a function similar to gluLookAt
 
 	if (camera == ORTHOGRAPHIC) {
-		/*lookAt(0, 10, 0, 0, 0, 0, 1, 0, 0);*/
+		lookAt(0, 10, 0, 0, 0, 0, 1, 0, 0);
 	}
 
 	else if (camera == TOP) {
-		lookAt(35, 10, 0, 0, 0, 0, 0, 1, 0);
+		lookAt(65, 10, 0, 0, 0, 0, 0, 1, 0);
 	}
 
 	else if (camera == CHASE) {
-		/*lookAt(cam[0], cam[1], cam[2], carPos[0], carPos[1], carPos[2], 0, 1, 0);
-		translate(VIEW, carPos[0], carPos[1], carPos[2]);
-		rotate(VIEW, camPitch, 0, 0, 1);
-		rotate(VIEW, -carAngle + camAngle, 0.0f, 1.0f, 0.0f);
-		translate(VIEW, -carPos[0], -carPos[1], -carPos[2]);*/
+		lookAt(camX + carPos[0], camY + carPos[1] + 0.0f, camZ + carPos[2], carPos[0], carPos[1], carPos[2], 0, 1, 0);
 	}
 
 	// use our shader
@@ -217,17 +237,25 @@ void renderScene(void) {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
 
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
+	//glActiveTexture(GL_TEXTURE1);
+	//glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
 
 	glUniform1i(tex_1_loc, 0);
-	glUniform1i(tex_2_loc, 1);
+	//glUniform1i(tex_2_loc, 1);
 
 	pushMatrix(MODEL);
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
 
+	objID = 0;
+	scale(MODEL, 100.0f, 0.25f, 100.0f);
+	translate(MODEL, -0.5f, -0.5f, -0.5f);
+	glUniform1i(texMode_UID, 1);
+	render();
+	glUniform1i(texMode_UID, 0);
 
+	objID = 1;
+	render();
 
 	popMatrix(MODEL);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -248,9 +276,9 @@ void keyDown(unsigned char key, int xx, int yy)
 			break;
 
 		//cameras
-		//case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-25, 25, -25, 25, 0.1f, 1000.f); break;
+		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-50, 50, -50, 50, 0.1f, 1000.f); break;
 		case '2': camera = TOP; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
-		//case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
+		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
 
 
 		//aliasing settings
@@ -258,7 +286,7 @@ void keyDown(unsigned char key, int xx, int yy)
 		case 'n': glDisable(GL_MULTISAMPLE); break;
 
 		//game controls
-		case 'p': paused = !paused; break;
+		//case 'p': paused = !paused; break;
 	}
 }
 
@@ -281,7 +309,7 @@ void keyUp(unsigned char key, int xx, int yy)
 void processMouseButtons(int button, int state, int xx, int yy)
 {
 	// start tracking the mouse
-	if (state == GLUT_DOWN)  {
+	if (state == GLUT_DOWN) {
 		startX = xx;
 		startY = yy;
 		if (button == GLUT_LEFT_BUTTON)
@@ -293,8 +321,13 @@ void processMouseButtons(int button, int state, int xx, int yy)
 	//stop tracking the mouse
 	else if (state == GLUT_UP) {
 		if (tracking == 1) {
+			alpha -= (xx - startX);
+			beta += (yy - startY);
 		}
 		else if (tracking == 2) {
+			r += (yy - startY) * 0.01f;
+			if (r < 0.1f)
+				r = 0.1f;
 		}
 		tracking = 0;
 	}
@@ -309,15 +342,35 @@ void processMouseMotion(int xx, int yy)
 	float alphaAux, betaAux;
 	float rAux;
 
-	deltaX =  - xx + startX;
-	deltaY =    yy - startY;
+	deltaX = -xx + startX;
+	deltaY = yy - startY;
 
 	// left mouse button: move camera
 	if (tracking == 1) {
+
+
+		alphaAux = alpha + deltaX;
+		betaAux = beta + deltaY;
+
+		if (betaAux > 85.0f)
+			betaAux = 85.0f;
+		else if (betaAux < -85.0f)
+			betaAux = -85.0f;
+		rAux = r;
 	}
 	// right mouse button: zoom
 	else if (tracking == 2) {
+
+		alphaAux = alpha;
+		betaAux = beta;
+		rAux = r + (deltaY * 0.01f);
+		if (rAux < 0.1f)
+			rAux = 0.1f;
 	}
+
+	camX = rAux * sin(alphaAux * PI / 180.0f) * cos(betaAux * PI / 180.0f);
+	camZ = rAux * cos(alphaAux * PI / 180.0f) * cos(betaAux * PI / 180.0f);
+	camY = rAux * sin(betaAux * PI / 180.0f);
 
 
 //  uncomment this if not using an idle func
@@ -326,6 +379,14 @@ void processMouseMotion(int xx, int yy)
 
 
 void mouseWheel(int wheel, int direction, int x, int y) {
+
+	r -= direction * 0.1f;
+	if (r < 0.1f)
+		r = 0.1f;
+
+	camX = r * sin(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
+	camZ = r * cos(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
+	camY = r * sin(beta * PI / 180.0f);
 
 //  uncomment this if not using an idle func
 //	glutPostRedisplay();
@@ -357,13 +418,13 @@ GLuint setupShaders() {
 	normal_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_normal");
 
 	// texMode = on or off
-	/*texMode_UID = glGetUniformLocation(shader.getProgramIndex(), "texMode");
+	texMode_UID = glGetUniformLocation(shader.getProgramIndex(), "texMode");
 	tex_1_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
-	tex_2_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap2");*/
+	//tex_2_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
 	
 	printf("InfoLog for Hello World Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
-	//std::cin.ignore(); //in case of crash
+	std::cin.ignore(); //in case of crash
 	
 	return(shader.isProgramLinked());
 }
@@ -386,9 +447,40 @@ void loadMaterials(float* ambient, float* diffuse, float* specular, float* emiss
 void init()
 {
 
-	/*glGenTextures(2, TextureArray);
-	TGA_Texture(TextureArray, "textures/kt_rock_1f_shiny.tga", 0);
-	TGA_Texture(TextureArray, "textures/wall_512_1_05.tga", 1);*/
+	//setup camera
+	camX = r * sin(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
+	camZ = r * cos(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
+	camY = r * sin(beta * PI / 180.0f);
+
+	glGenTextures(1, TextureArray);
+	TGA_Texture(TextureArray, "textures/wall_512_1_05.tga", 0);
+
+	//Model init
+
+	//Table
+	objID = 0;
+
+	float ambTable[4] = { 0.2f, 0.1f, 0.0f, 1.0f };
+	float diffTable[4] = { 0.3f, 0.3f, 0.0f, 1.0f };
+	float specTable[4] = { 1, 1, 1, 1.0f };
+	float non_emissive[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	float shininess = 10.0f;
+	int texCount = 0;
+
+	loadMaterials(ambTable, diffTable, specTable, non_emissive, shininess, texCount);
+	createCube();
+
+	// test cube
+	objID = 1;
+
+	float ambTestCube[4] = { 0.1f, 0.0f, 0.1f, 1.0f };
+	float diffTestCube[4] = { 0.5f, 0.0f, 0.5f, 1.0f };
+	float specTestCube[4] = { 0.5f, 0.0f, 0.5f, 1.0f };
+	float null[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	loadMaterials(ambTestCube, diffTestCube, specTestCube, null, shininess, texCount);
+	createCube();
+
 
 
 	// some GL settings
