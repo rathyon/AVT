@@ -58,10 +58,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\pointlight.frag">
+    <None Include="shaders\main_shader.frag">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\pointlight.vert">
+    <None Include="shaders\main_shader.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

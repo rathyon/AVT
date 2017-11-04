@@ -147,8 +147,8 @@
     <ClInclude Include="vsShaderLib.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\pointlight.frag" />
-    <None Include="shaders\pointlight.vert" />
+    <None Include="shaders\main_shader.frag" />
+    <None Include="shaders\main_shader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
