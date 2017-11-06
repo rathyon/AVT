@@ -24,7 +24,6 @@
 
 // TinyLoader
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
 
 // Use Very Simple Libs
 #include "VSShaderlib.h"
@@ -50,10 +49,11 @@ GLuint pid;
 
 // table = 0
 // test cube = 1
-const int objCount = 2;
+// cheerios = 2 to 50
+const int objCount = 50;
 
 struct MyMesh mesh[objCount];
-int objID=0;
+int objID = 0;
 
 
 //External array storage defined in AVTmathLib.cpp
@@ -89,6 +89,12 @@ int startX, startY, tracking = 0;
 //------------------[ CAR ]------------------//
 
 float carPos[3];
+
+//------------------[ CHEERIOS ]------------------//
+
+#define NUMBER_INNER_CHEERIOS 18
+#define NUMBER_OUTER_CHEERIOS 30
+
 
 //------------------[ LIGHTS ]------------------//
 
@@ -247,6 +253,7 @@ void renderScene(void) {
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
 
+	// Table
 	objID = 0;
 	scale(MODEL, 100.0f, 0.25f, 100.0f);
 	translate(MODEL, -0.5f, -0.5f, -0.5f);
@@ -254,8 +261,23 @@ void renderScene(void) {
 	render();
 	glUniform1i(texMode_UID, 0);
 
+	// TestCube
 	objID = 1;
 	render();
+
+	// Cheerios
+	for (int i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
+		objID++;
+		translate(MODEL, cos(i) * 20.0f, 0.5f, sin(i) * 20.0f); // This will put Cheerios in a circle
+		render();
+	}
+
+	for (int i = 0; i < NUMBER_OUTER_CHEERIOS; i++) {
+		objID++;
+		translate(MODEL, cos(i) * 40.0f, 0.5f, sin(i) * 40.0f);
+		render();
+	}
+
 
 	popMatrix(MODEL);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -424,7 +446,7 @@ GLuint setupShaders() {
 	
 	printf("InfoLog for Hello World Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
-	std::cin.ignore(); //in case of crash
+	//std::cin.ignore(); //in case of crash
 	
 	return(shader.isProgramLinked());
 }
@@ -457,12 +479,12 @@ void init()
 
 	//Model init
 
-	//Table
+	// Table
 	objID = 0;
 
 	float ambTable[4] = { 0.2f, 0.1f, 0.0f, 1.0f };
 	float diffTable[4] = { 0.3f, 0.3f, 0.0f, 1.0f };
-	float specTable[4] = { 1, 1, 1, 1.0f };
+	float specTable[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	float non_emissive[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float shininess = 10.0f;
 	int texCount = 0;
@@ -481,7 +503,17 @@ void init()
 	loadMaterials(ambTestCube, diffTestCube, specTestCube, null, shininess, texCount);
 	createCube();
 
+	// Cheerios
 
+	float ambCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
+	float diffCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
+	float specCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
+
+	for (int i = 0; i < NUMBER_INNER_CHEERIOS + NUMBER_OUTER_CHEERIOS; i++) {
+		objID++;
+		loadMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
+		createTorus(0.5f, 1.0f, 10, 10);
+	}
 
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);

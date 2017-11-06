@@ -1,0 +1,5 @@
+﻿  MicroMachines.cpp
+c:\users\homepc\documents\github\avt\projects\micromachines\micromachines.cpp(170): warning C4101: 'res': unreferenced local variable
+c:\users\homepc\documents\github\avt\projects\micromachines\micromachines.cpp(271): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\homepc\documents\github\avt\projects\micromachines\micromachines.cpp(277): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  Micromachines.vcxproj -> C:\Users\HomePC\Documents\GitHub\AVT\projects\Micromachines\Debug\Micromachines.exe

@@ -90,7 +90,8 @@ void main() {
 		texel1 = texture(texmap1, DataIn.tex_coord);
 		//texel2 = texture(texmap2, DataIn.tex_coord);
 
-		colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
+		//colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
+		colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1);
 	} else {
 
 	vec4 rgb = min(scatteredLight + reflectedLight, vec4(1.0));

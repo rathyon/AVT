@@ -50,9 +50,6 @@
     <ClInclude Include="vsShaderLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tiny_obj_loader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TGA.h">
       <Filter>Header Files</Filter>
     </ClInclude>
