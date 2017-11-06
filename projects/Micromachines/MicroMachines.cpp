@@ -68,6 +68,8 @@ extern float mNormal3x3[9];
 GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
+
+float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
 	
 //------------------[ CAMERAS ]------------------//
 
@@ -88,13 +90,31 @@ int startX, startY, tracking = 0;
 
 //------------------[ CAR ]------------------//
 
-float carPos[3];
+float carPos[3] = { 30.0f, 0.0f, 0.0f };
+float carDir[3] = { 0.0f, 0.0f, 1.0f };
+float carSpeed = 0.0f;
+float carAcc = 0.05f;
+float carBrake = 0.5f;
+float carReverse = 0.02f;
+float carAngularSpeed = 3.0f;
+float carAngle = 0.0f;
+float speedLimit = 5.0f;
+float epsilon = 0.3f;
+
+
+bool carIsForward = false;
+bool carIsReverse = false;;
+bool carIsLeft = false;
+bool carIsRight = false;
 
 //------------------[ CHEERIOS ]------------------//
 
-#define NUMBER_INNER_CHEERIOS 18
-#define NUMBER_OUTER_CHEERIOS 30
+#define NUMBER_INNER_CHEERIOS 20.0f
+#define NUMBER_OUTER_CHEERIOS 20.0f
+#define NUMBER_CHEERIOS 40
 
+float cheerioPos[NUMBER_CHEERIOS][4];
+float cheerioSide = 1.0f;
 
 //------------------[ LIGHTS ]------------------//
 
@@ -163,6 +183,49 @@ void changeSize(int w, int h) {
 //
 // Render stufff
 //
+void animateCar() {
+	float aux[3];
+
+	if (carIsForward) {
+		if(carSpeed < speedLimit)
+			carSpeed += carAcc;
+		aux[0] = carDir[0] * carSpeed;
+		aux[1] = carDir[1] * carSpeed;
+		aux[2] = carDir[2] * carSpeed;
+		add(carPos, aux, carPos);
+	}
+
+	if (carIsReverse) {
+		if (carSpeed > -speedLimit)
+			carSpeed -= carReverse;
+		aux[0] = carDir[0] * carSpeed;
+		aux[1] = carDir[1] * carSpeed;
+		aux[2] = carDir[2] * carSpeed;
+		add(carPos, aux, carPos);
+	}
+
+	if (!carIsReverse && !carIsForward) {
+		if (carSpeed < epsilon || carSpeed > -epsilon)
+			carSpeed = 0;
+		else if (carSpeed > 0)
+			carSpeed -= carBrake;
+		else
+			carSpeed += carBrake;
+	}
+
+
+	if (carIsLeft) {
+		rotate(carDir, carAngularSpeed, axisY);
+		carAngle += carAngularSpeed;
+	}
+
+	else if (carIsRight) {
+		rotate(carDir, -carAngularSpeed, axisY);
+		carAngle -= carAngularSpeed;
+	}
+
+
+}
 
 void sendLights() {
 
@@ -251,6 +314,8 @@ void renderScene(void) {
 
 	pushMatrix(MODEL);
 
+	animateCar();
+
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
 
 	// Table
@@ -263,17 +328,15 @@ void renderScene(void) {
 
 	// TestCube
 	objID = 1;
+	translate(MODEL, carPos[0], carPos[1], carPos[2]);
+	rotate(MODEL, carAngle, 0.0f, 1.0f, 0.0f);
+	translate(MODEL, -0.5f, 0.0f, -0.5f);
 	render();
 
 	// Cheerios
 	objID = 2;
-	for (int i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
-		translate(MODEL, cos(i) * 20.0f, 0.5f, sin(i) * 20.0f); // This will put Cheerios in a circle
-		render();
-	}
-
-	for (int i = 0; i < NUMBER_OUTER_CHEERIOS; i++) {
-		translate(MODEL, cos(i) * 40.0f, 0.5f, sin(i) * 40.0f);
+	for (int i = 0; i < NUMBER_CHEERIOS; i++) {
+		translate(MODEL, cheerioPos[i][0], cheerioPos[i][1], cheerioPos[i][2]);
 		render();
 	}
 
@@ -308,16 +371,21 @@ void keyDown(unsigned char key, int xx, int yy)
 
 		//game controls
 		//case 'p': paused = !paused; break;
+
+		case 'w': carIsForward = true;  break;
+		case 's': carIsReverse = true;  break;
+		case 'd': carIsRight = true;  break;
+		case 'a': carIsLeft = true;  break;
 	}
 }
 
 void keyUp(unsigned char key, int xx, int yy)
 {
 	switch (key) {
-		case 'w': break;
-		case 's': break;
-		case 'd': break;
-		case 'a': break;
+	case 'w': carIsForward = false;  break;
+	case 's': carIsReverse = false;  break;
+	case 'd': carIsRight = false;  break;
+	case 'a': carIsLeft = false;  break;
 	}
 }
 
@@ -477,6 +545,32 @@ void init()
 	TGA_Texture(TextureArray, "textures/wall_512_1_05.tga", 0);
 
 	//Model init
+
+	//Cheerio position init
+	float innerStep = 360.0f / NUMBER_INNER_CHEERIOS;
+	for (int i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
+		float aux[4] = { 20.0f, 0.5f, 0.0f, 1.0f };
+		float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+		rotate(aux, (float)i*innerStep, axisY);
+		cheerioPos[i][0] = aux[0];
+		cheerioPos[i][1] = aux[1];
+		cheerioPos[i][2] = aux[2];
+		cheerioPos[i][3] = aux[3];
+	}
+
+	float outerStep = 360.0f / NUMBER_OUTER_CHEERIOS;
+	for (int i = (int)NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
+		float aux[4] = { 40.0f, 0.5f, 0.0f, 1.0f };
+		float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+		rotate(aux, (float)i*outerStep, axisY);
+		cheerioPos[i][0] = aux[0];
+		cheerioPos[i][1] = aux[1];
+		cheerioPos[i][2] = aux[2];
+		cheerioPos[i][3] = aux[3];
+	}
+
+
+
 
 	// Table
 	objID = 0;
