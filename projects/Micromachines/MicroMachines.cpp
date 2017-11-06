@@ -49,8 +49,8 @@ GLuint pid;
 
 // table = 0
 // test cube = 1
-// cheerios = 2 to 50
-const int objCount = 50;
+// cheerios = 2
+const int objCount = 3;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -266,14 +266,13 @@ void renderScene(void) {
 	render();
 
 	// Cheerios
+	objID = 2;
 	for (int i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
-		objID++;
 		translate(MODEL, cos(i) * 20.0f, 0.5f, sin(i) * 20.0f); // This will put Cheerios in a circle
 		render();
 	}
 
 	for (int i = 0; i < NUMBER_OUTER_CHEERIOS; i++) {
-		objID++;
 		translate(MODEL, cos(i) * 40.0f, 0.5f, sin(i) * 40.0f);
 		render();
 	}
@@ -509,11 +508,9 @@ void init()
 	float diffCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
 	float specCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
 
-	for (int i = 0; i < NUMBER_INNER_CHEERIOS + NUMBER_OUTER_CHEERIOS; i++) {
-		objID++;
-		loadMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
-		createTorus(0.5f, 1.0f, 10, 10);
-	}
+	objID = 2;
+	loadMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
+	createTorus(0.5f, 1.0f, 10, 10);
 
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
