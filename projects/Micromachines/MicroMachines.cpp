@@ -91,19 +91,19 @@ int startX, startY, tracking = 0;
 //------------------[ CAR ]------------------//
 
 float carPos[3] = { 30.0f, 0.0f, 0.0f };
-float carDir[3] = { 0.0f, 0.0f, 1.0f };
+float carDir[3] = { 0.0f, 0.0f, -1.0f };
 float carSpeed = 0.0f;
-float carAcc = 0.05f;
-float carBrake = 0.5f;
-float carReverse = 0.02f;
-float carAngularSpeed = 3.0f;
+float carAcc = 0.001f;
+float carBrake = 0.0005f;
+float carReverse = 0.002f;
+float carAngularSpeed = 2.0f;
 float carAngle = 0.0f;
-float speedLimit = 5.0f;
-float epsilon = 0.3f;
+float speedLimit = 0.3f;
+float epsilon = 0.003f;
 
 
 bool carIsForward = false;
-bool carIsReverse = false;;
+bool carIsReverse = false;
 bool carIsLeft = false;
 bool carIsRight = false;
 
@@ -183,6 +183,13 @@ void changeSize(int w, int h) {
 //
 // Render stufff
 //
+
+void updateCamera() {
+	//setup camera
+	camX = r * sin(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
+	camZ = r * cos(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
+	camY = r * sin(beta * PI / 180.0f);
+}
 void animateCar() {
 	float aux[3];
 
@@ -205,7 +212,9 @@ void animateCar() {
 	}
 
 	if (!carIsReverse && !carIsForward) {
-		if (carSpeed < epsilon || carSpeed > -epsilon)
+		if (carSpeed <= epsilon && carSpeed > 0.0f)
+			carSpeed = 0;
+		else if (carSpeed >= -epsilon && carSpeed < 0.0f)
 			carSpeed = 0;
 		else if (carSpeed > 0)
 			carSpeed -= carBrake;
@@ -217,11 +226,15 @@ void animateCar() {
 	if (carIsLeft) {
 		rotate(carDir, carAngularSpeed, axisY);
 		carAngle += carAngularSpeed;
+		alpha += carAngularSpeed;
+		updateCamera();
 	}
 
 	else if (carIsRight) {
 		rotate(carDir, -carAngularSpeed, axisY);
 		carAngle -= carAngularSpeed;
+		alpha -= carAngularSpeed;
+		updateCamera();
 	}
 
 
@@ -293,7 +306,7 @@ void renderScene(void) {
 	}
 
 	else if (camera == CHASE) {
-		lookAt(camX + carPos[0], camY + carPos[1] + 0.0f, camZ + carPos[2], carPos[0], carPos[1], carPos[2], 0, 1, 0);
+		lookAt(camX + carPos[0], camY + carPos[1] + 2.0f, camZ + carPos[2], carPos[0], carPos[1], carPos[2], 0, 1, 0);
 	}
 
 	// use our shader
@@ -535,11 +548,7 @@ void loadMaterials(float* ambient, float* diffuse, float* specular, float* emiss
 
 void init()
 {
-
-	//setup camera
-	camX = r * sin(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
-	camZ = r * cos(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
-	camY = r * sin(beta * PI / 180.0f);
+	updateCamera();
 
 	glGenTextures(1, TextureArray);
 	TGA_Texture(TextureArray, "textures/wall_512_1_05.tga", 0);
