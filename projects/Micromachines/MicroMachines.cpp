@@ -22,9 +22,6 @@
 // GLUT is the toolkit to interface with the OS
 #include <GL/freeglut.h>
 
-// TinyLoader
-#define TINYOBJLOADER_IMPLEMENTATION
-
 // Use Very Simple Libs
 #include "VSShaderlib.h"
 #include "AVTmathLib.h"
@@ -50,7 +47,8 @@ GLuint pid;
 // table = 0
 // test cube = 1
 // cheerios = 2
-const int objCount = 3;
+// orange = 3
+const int objCount = 4;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -116,6 +114,15 @@ bool carIsRight = false;
 float cheerioPos[NUMBER_CHEERIOS][4];
 float cheerioSide = 1.0f;
 
+//------------------[ ORANGES ]------------------//
+
+#define NUMBER_ORANGES 5
+
+float orangePos[NUMBER_ORANGES][4];
+float orangeSpeed[NUMBER_ORANGES];
+float orangeAcceleration[NUMBER_ORANGES];
+float orangeSide = 2.0f;
+
 //------------------[ LIGHTS ]------------------//
 
 float dirLight[4] = { 0.5f, 1.0f, 0.0f, 0.0f };
@@ -127,6 +134,14 @@ GLint texMode_UID;
 GLint tex_1_loc;
 
 GLuint TextureArray[1];
+
+//------------------[ AUXILIARY FUNCS ]------------------//
+
+//returns float between 0.0f and 1.0f
+float RNG() {
+	float RNG = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+	return RNG;
+}
 
 //-----------------------------------------------//
 
@@ -240,6 +255,31 @@ void animateCar() {
 
 }
 
+void animateOranges() {
+
+	for (int i = 0; i < NUMBER_ORANGES; i++) {
+
+
+		if (orangePos[i][0] >= 100.0f) { // respawn
+			orangePos[i][0] = -50.0f;
+			orangePos[i][1] = 1.0f;
+		}
+		else if (orangePos[i][0] >= 50.0f) { // hide orange
+
+			if(orangePos[i][1] != -500.0f) // just to avoid too many writes
+				orangePos[i][1] = -500.0f;
+
+			orangePos[i][0] += orangeSpeed[i];
+		}
+		else { // normal movement
+			orangeSpeed[i] += orangeAcceleration[i];
+			orangePos[i][0] += orangeSpeed[i];
+		}
+
+	}
+
+}
+
 void sendLights() {
 
 	GLint loc;
@@ -350,6 +390,15 @@ void renderScene(void) {
 	objID = 2;
 	for (int i = 0; i < NUMBER_CHEERIOS; i++) {
 		translate(MODEL, cheerioPos[i][0], cheerioPos[i][1], cheerioPos[i][2]);
+		render();
+	}
+
+	animateOranges();
+
+	// Oranges
+	objID = 3;
+	for (int i = 0; i < NUMBER_ORANGES; i++) {
+		translate(MODEL, orangePos[i][0], orangePos[i][1], orangePos[i][2]);
 		render();
 	}
 
@@ -578,6 +627,17 @@ void init()
 		cheerioPos[i][3] = aux[3];
 	}
 
+	//Orange position init
+
+	for (int i = 0; i < NUMBER_ORANGES; i++) {
+		orangePos[i][0] = -50.0f;
+		orangePos[i][1] = 1.0f;
+		orangePos[i][2] = -30.0f + (15.0f * (float) i);
+		orangePos[i][3] = 1.0f;
+
+		orangeSpeed[i] = RNG() * 0.6f;
+		orangeAcceleration[i] = RNG() * 0.0001f;
+	}
 
 
 
@@ -607,13 +667,23 @@ void init()
 
 	// Cheerios
 
-	float ambCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
+	float ambCheerio[4] = { 0.01f, 0.02f, 0.0f, 1.0f };
 	float diffCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
 	float specCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
 
 	objID = 2;
 	loadMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
 	createTorus(0.5f, 1.0f, 10, 10);
+
+	// Oranges
+	objID = 3;
+
+	float ambOrange[4] = { 0.1f, 0.07f, 0.0f, 1.0f };
+	float diffOrange[4] = {1.0f, 0.7f, 0.0f, 1.0f};
+	float specOrange[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	loadMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
+	createSphere(1.0f, 30);
 
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
