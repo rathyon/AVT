@@ -112,6 +112,18 @@ bool carIsReverse = false;
 bool carIsLeft = false;
 bool carIsRight = false;
 
+//------------------[ CHECKPOINTS AND SCORE ]------------------//
+
+float checkPoint0[3] = { 30.0f, 0.0f, 0.0f };
+float checkPoint1[3] = { 0.0f, 0.0f, -30.0f };
+float checkPoint2[3] = { -30.0f, 0.0f, 0.0f };
+float checkPoint3[3] = { 0.0f, 0.0f, 30.0f };
+
+float checkPointSize = 10.0f;
+
+int currentCheckPoint = 0;
+int score = 0;
+
 //------------------[ CHEERIOS ]------------------//
 
 #define NUMBER_INNER_CHEERIOS 20.0f
@@ -444,6 +456,63 @@ void refresh(int value)
 	glutTimerFunc(1000/60, refresh, 0); // 60 fps
 }
 
+void updateScore() {
+	bool carInCheckPointX, carInCheckPointZ;
+
+	switch (currentCheckPoint) {
+	case 0:  // if car's last checkpoint was starting line
+		carInCheckPointX = carPos[0] >= checkPoint1[0] - checkPointSize &&
+			carPos[0] <= checkPoint1[0] + checkPointSize;
+
+		carInCheckPointZ = carPos[2] >= checkPoint1[2] - checkPointSize &&
+			carPos[2] <= checkPoint1[2] + checkPointSize;
+
+		if (carInCheckPointX && carInCheckPointZ) {
+			currentCheckPoint++;
+		}
+
+		break;
+	case 1:
+		carInCheckPointX = carPos[0] >= checkPoint2[0] - checkPointSize &&
+			carPos[0] <= checkPoint2[0] + checkPointSize;
+
+		carInCheckPointZ = carPos[2] >= checkPoint2[2] - checkPointSize &&
+			carPos[2] <= checkPoint2[2] + checkPointSize;
+
+		if (carInCheckPointX && carInCheckPointZ) {
+			currentCheckPoint++;
+		}
+
+		break;
+	case 2:
+		carInCheckPointX = carPos[0] >= checkPoint3[0] - checkPointSize &&
+			carPos[0] <= checkPoint3[0] + checkPointSize;
+
+		carInCheckPointZ = carPos[2] >= checkPoint3[2] - checkPointSize &&
+			carPos[2] <= checkPoint3[2] + checkPointSize;
+
+		if (carInCheckPointX && carInCheckPointZ) {
+			currentCheckPoint++;
+		}
+
+		break;
+	case 3:
+		carInCheckPointX = carPos[0] >= checkPoint0[0] - checkPointSize &&
+			carPos[0] <= checkPoint0[0] + checkPointSize;
+
+		carInCheckPointZ = carPos[2] >= checkPoint0[2] - checkPointSize &&
+			carPos[2] <= checkPoint0[2] + checkPointSize;
+
+		if (carInCheckPointX && carInCheckPointZ) {
+			currentCheckPoint = 0;
+			score++;
+		}
+
+		break;
+	}
+
+}
+
 // ------------------------------------------------------------
 //
 // Reshape Callback Function
@@ -650,6 +719,7 @@ void renderScene(void) {
 	pushMatrix(MODEL);
 
 	animateCar();
+	updateScore();
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
 
