@@ -169,7 +169,10 @@ float RNG() {
 #define aisgl_min(x,y) (x<y?x:y)
 #define aisgl_max(x,y) (y>x?y:x)
 
-const aiScene* scene = NULL;
+const aiScene* scene_1 = NULL;
+const aiScene* scene_2 = NULL;
+float scene_1_sf;
+float scene_2_sf;
 
 struct Mesh {
 
@@ -181,7 +184,7 @@ struct Mesh {
 
 Assimp::Importer importer;
 
-float scaleFactor; // why is this needed?! not used anywhere else
+float scaleFactor; // scale factor for the scene;
 
 std::vector<struct Mesh> meshes; // for storing imported .OBJ files
 
@@ -197,7 +200,7 @@ void color4_to_float4(const aiColor4D *c, float f[4]){
 	f[2] = c->b;
 	f[3] = c->a;
 }
-void get_bounding_box_for_node(const aiNode* nd, aiVector3D* min, aiVector3D* max) {
+void get_bounding_box_for_node(const aiNode* nd, aiVector3D* min, aiVector3D* max, const aiScene* scene) {
 	aiMatrix4x4 prev;
 	unsigned int n = 0, t;
 
@@ -218,16 +221,16 @@ void get_bounding_box_for_node(const aiNode* nd, aiVector3D* min, aiVector3D* ma
 	}
 
 	for (n = 0; n < nd->mNumChildren; ++n) {
-		get_bounding_box_for_node(nd->mChildren[n], min, max);
+		get_bounding_box_for_node(nd->mChildren[n], min, max, scene);
 	}
 }
-void get_bounding_box(aiVector3D* min, aiVector3D* max) {
+void get_bounding_box(aiVector3D* min, aiVector3D* max, const aiScene* scene) {
 
 	min->x = min->y = min->z = 1e10f;
 	max->x = max->y = max->z = -1e10f;
-	get_bounding_box_for_node(scene->mRootNode, min, max);
+	get_bounding_box_for_node(scene->mRootNode, min, max, scene);
 }
-bool Import3DFromFile(const std::string& pFile)
+bool Import3DFromFile(const std::string& pFile, const aiScene** scene)
 {
 
 	//check if file exists
@@ -241,7 +244,7 @@ bool Import3DFromFile(const std::string& pFile)
 		return false;
 	}
 
-	scene = importer.ReadFile(pFile, aiProcessPreset_TargetRealtime_Quality);
+	*scene = importer.ReadFile(pFile, aiProcessPreset_TargetRealtime_Quality);
 
 	// If the import failed, report it
 	if (!scene)
@@ -254,7 +257,7 @@ bool Import3DFromFile(const std::string& pFile)
 	printf("Import of scene %s succeeded.", pFile.c_str());
 
 	aiVector3D scene_min, scene_max, scene_center;
-	get_bounding_box(&scene_min, &scene_max);
+	get_bounding_box(&scene_min, &scene_max, *scene);
 	float tmp;
 	tmp = scene_max.x - scene_min.x;
 	tmp = scene_max.y - scene_min.y > tmp ? scene_max.y - scene_min.y : tmp;
@@ -681,7 +684,7 @@ void renderScene(void) {
 	}
 
 	else if (camera == TOP) {
-		lookAt(65, 10, 0, 0, 0, 0, 0, 1, 0);
+		lookAt(65, 30, 0, 0, 0, 0, 0, 1, 0);
 	}
 
 	else if (camera == CHASE) {
@@ -713,7 +716,8 @@ void renderScene(void) {
 
 	// Table
 	objID = 0;
-	scale(MODEL, 100.0f, 0.25f, 100.0f);
+	translate(MODEL, 0.0f, -50.0f, 0.0f);
+	scale(MODEL, 100.0f, 100.0f, 100.0f);
 	translate(MODEL, -0.5f, -0.5f, -0.5f);
 	glUniform1i(texMode_UID, 1);
 	render();
@@ -742,7 +746,13 @@ void renderScene(void) {
 		render();
 	}
 
-	renderModel(0, scene, scene->mRootNode);
+	pushMatrix(MODEL);
+
+	translate(MODEL, 0.0f, -0.003f, 0.0f);
+	scale(MODEL, scene_1_sf*130.0f, scene_1_sf*130.0f, scene_1_sf*130.0f);
+	renderModel(0, scene_1, scene_1->mRootNode);
+
+	popMatrix(MODEL);
 
 
 	popMatrix(MODEL);
@@ -873,7 +883,7 @@ void processMouseMotion(int xx, int yy)
 
 void mouseWheel(int wheel, int direction, int x, int y) {
 
-	r -= direction * 0.1f;
+	r -= direction * 1.0f;
 	if (r < 0.1f)
 		r = 0.1f;
 
@@ -942,7 +952,7 @@ void init()
 	updateCamera();
 
 	glGenTextures(1, TextureArray);
-	TGA_Texture(TextureArray, "textures/wall_512_1_05.tga", 0);
+	TGA_Texture(TextureArray, "textures/futuristic_grid.tga", 0);
 
 	//Model init
 
@@ -1029,15 +1039,44 @@ void init()
 
 	/*----------------- ASSIMP -------------------*/
 
-	if (!Import3DFromFile("bench.obj"))
-		std::cout << "ERROR LOADING MODEL" << std::endl;
+	/**/
+	if (!Import3DFromFile("models/level.obj", &scene_1))
+		std::cout << "ERROR LOADING LEVEL OBJ" << std::endl;
 
-	genVAOsAndUniformBuffer(scene);
+	scene_1_sf = scaleFactor;
+	genVAOsAndUniformBuffer(scene_1);
 
+	float ambLevel[4] = { 0.01f, 0.01f, 0.01f, 0.5f };
+	float diffLevel[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+	float specLevel[4] = { 1.0f, 1.0f, 1.0f, 0.5f };
+
+	memcpy(meshes[0].mat.ambient, ambLevel, sizeof(ambLevel));
+	memcpy(meshes[0].mat.diffuse, diffLevel, sizeof(diffLevel));
+	memcpy(meshes[0].mat.specular, specLevel, sizeof(specLevel));
+
+	/** /
+	if (!Import3DFromFile("models/cube_lamp.obj", &scene_2))
+		std::cout << "ERROR LOADING LAMP OBJ" << std::endl;
+
+	scene_2_sf = scaleFactor;
+	genVAOsAndUniformBuffer(scene_2);
+
+	float ambLamp[4] = { 0.0f, 0.0f, 0.1f, 1.0f };
+	float diffLamp[4] = { 0.0f, 0.2f, 0.7f, 1.0f };
+	float specLamp[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+
+	memcpy(meshes[0].mat.ambient, ambLamp, sizeof(ambLamp));
+	memcpy(meshes[0].mat.diffuse, diffLamp, sizeof(diffLamp));
+	memcpy(meshes[0].mat.specular, specLamp, sizeof(specLamp));
+	/**/
+	
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_MULTISAMPLE);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 
 }
