@@ -1,1 +1,3 @@
-﻿
+﻿  MicroMachines.cpp
+c:\users\diogo\documents\github\avt\projects\micromachines\micromachines.cpp(780): warning C4101: 'res': unreferenced local variable
+  Micromachines.vcxproj -> C:\Users\Diogo\Documents\GitHub\AVT\projects\Micromachines\Debug\Micromachines.exe

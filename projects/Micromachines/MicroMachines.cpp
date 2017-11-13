@@ -95,8 +95,10 @@ int startX, startY, tracking = 0;
 
 //------------------[ CAR ]------------------//
 
+float const carInitPos[3] = { 30.0f, 0.0f, 0.0f };
 float carPos[3] = { 30.0f, 0.0f, 0.0f };
 float carDim[2] = { 1.0f, 1.0f };
+float const carInitDir[3] = { 0.0f, 0.0f, -1.0f };
 float carDir[3] = { 0.0f, 0.0f, -1.0f };
 
 float carSpeed = 0.0f;
@@ -128,6 +130,10 @@ int currentCheckPoint = 0;
 int score = 0;
 
 int lives = 5;
+float livesPos[5][3];
+
+bool isGameOver = false;
+bool isPaused = false;
 
 //------------------[ CHEERIOS ]------------------//
 
@@ -453,7 +459,7 @@ void renderModel(int model_ID, const aiScene *sc, const aiNode* nd)
 void timer(int value)
 {
 	std::ostringstream oss;
-	oss << CAPTION << ": " << FrameCount << " FPS @ (" << WinX << "x" << WinY << ")";
+	oss << CAPTION << " Score - " << score << " : " << FrameCount << " FPS @ (" << WinX << "x" << WinY << ")";
 	std::string s = oss.str();
 	glutSetWindow(WindowHandle);
 	glutSetWindowTitle(s.c_str());
@@ -507,6 +513,105 @@ void updateScore() {
 
 		break;
 	}
+}
+
+void resetCamera() {
+	alpha = 0.0f;
+	beta = 30.0f;
+	r = 15.0f;
+}
+
+void resetCar() {
+	carSpeed = 0.0f;
+	carAngle = 0.0f;
+
+	carDir[0] = carInitDir[0];
+	carDir[1] = carInitDir[1];
+	carDir[2] = carInitDir[2];
+
+	carPos[0] = carInitPos[0];
+	carPos[1] = carInitPos[1];
+	carPos[2] = carInitPos[2];
+}
+
+void resetCheerios() {
+	float innerStep = 360.0f / NUMBER_INNER_CHEERIOS;
+	for (int i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
+		float aux[4] = { 20.0f, 0.5f, 0.0f, 1.0f };
+		float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+		rotate(aux, (float)i*innerStep, axisY);
+		cheerioPos[i][0] = aux[0];
+		cheerioPos[i][1] = aux[1];
+		cheerioPos[i][2] = aux[2];
+		cheerioPos[i][3] = aux[3];
+		cheerioSpeed[i] = 0.0f;
+	}
+
+	float outerStep = 360.0f / NUMBER_OUTER_CHEERIOS;
+	for (int i = (int)NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
+		float aux[4] = { 40.0f, 0.5f, 0.0f, 1.0f };
+		float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+		rotate(aux, (float)i*outerStep, axisY);
+		cheerioPos[i][0] = aux[0];
+		cheerioPos[i][1] = aux[1];
+		cheerioPos[i][2] = aux[2];
+		cheerioPos[i][3] = aux[3];
+		cheerioSpeed[i] = 0.0f;
+
+	}
+}
+
+void resetOranges() {
+	for (int i = 0; i < NUMBER_ORANGES; i++) {
+		orangePos[i][0] = -50.0f;
+		orangePos[i][1] = 1.0f;
+		orangePos[i][2] = -30.0f + (15.0f * (float)i);
+		orangePos[i][3] = 1.0f;
+
+		orangeSpeed[i] = RNG() * 0.6f;
+		orangeAcceleration[i] = RNG() * 0.0001f;
+	}
+}
+
+void resetGame() {
+	resetCar();
+	resetOranges();
+}
+
+void collisionWithOranges() {
+	for (int i = 0; i < NUMBER_ORANGES; i++) {
+		if (hasCollided(carPos, carDim, orangePos[i], orangeDim)) {
+			if (lives > 1) {
+				lives--;
+				resetCamera();
+				resetCar();
+				resetOranges();
+			}
+			else
+				isGameOver = true;
+			// else gameover
+		}
+	}
+}
+
+void setOrthogonalProjectionForHUD(int w, int h) {
+	pushMatrix(PROJECTION);
+	pushMatrix(MODEL);
+	pushMatrix(VIEW);
+
+	loadIdentity(PROJECTION);
+
+	float ratio = (float)w / h;
+	if (ratio > 1) {
+		ortho(-12.5f * ratio, 12.5f * ratio, -12.5f, 12.5f, -2.0f, 10.0f);
+	}
+	else {
+		ortho(-12.5f, 12.5f, -12.5f / ratio, 12.5f / ratio, -2.0f, 10.0f);
+	}
+
+	loadIdentity(MODEL);
+	loadIdentity(VIEW);
+	lookAt(0.0f, 10.0f, 0.0f, 0.0f, 5.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 }
 
 // ------------------------------------------------------------
@@ -715,6 +820,40 @@ void render() {
 
 }
 
+void displayLives(int w, int h) {
+	float x, z, ratio;
+	ratio = (float)w / h;
+
+	setOrthogonalProjectionForHUD(w, h);
+	if (ratio > 1.0f) {
+		x = 10.5f * ratio;
+		z = 10.5f;
+	}
+
+	else {
+		x = 10.5f;
+		z = 10.5f / ratio;
+	}
+
+
+	for (int i = 0; i < lives; i++) {
+		livesPos[i][0] = z;
+		livesPos[i][1] = 1.0f;
+		livesPos[i][2] = x - 1.5f*i;
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_INVERT);
+		glStencilMask(0xFF);
+		objID = 1;
+		translate(MODEL, livesPos[i][0], livesPos[i][1], livesPos[i][2]);
+		render();
+	}
+
+	popMatrix(PROJECTION);
+	popMatrix(MODEL);
+	popMatrix(VIEW);
+
+}
+
 void renderScene(void) {
 
 	pid = shader.getProgramIndex();
@@ -756,9 +895,15 @@ void renderScene(void) {
 
 	pushMatrix(MODEL);
 
-	animateCar();
-	animateCheerios();
+	if (!isPaused && !isGameOver) {
+		animateCar();
+		animateOranges();
+		animateCheerios();
+	}
+
 	updateScore();
+	displayLives(WinX, WinY);
+
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
 
@@ -785,7 +930,7 @@ void renderScene(void) {
 		render();
 	}
 
-	animateOranges();
+	collisionWithOranges();
 
 	// Oranges
 	objID = 3;
@@ -815,29 +960,32 @@ void renderScene(void) {
 
 void keyDown(unsigned char key, int xx, int yy)
 {
-	switch(key) {
+	switch (key) {
 
-		case 27:
-			glutLeaveMainLoop();
-			break;
+	case 27:
+		glutLeaveMainLoop();
+		break;
 
 		//cameras
-		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-50, 50, -50, 50, 0.1f, 1000.f); break;
-		case '2': camera = TOP; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
-		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
+	case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-50, 50, -50, 50, 0.1f, 1000.f); break;
+	case '2': camera = TOP; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
+	case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
 
 
 		//aliasing settings
-		case 'm': glEnable(GL_MULTISAMPLE); break;
-		case 'n': glDisable(GL_MULTISAMPLE); break;
+	case 'm': glEnable(GL_MULTISAMPLE); break;
+	case 'n': glDisable(GL_MULTISAMPLE); break;
 
 		//game controls
-		//case 'p': paused = !paused; break;
 
-		case 'w': carIsForward = true;  break;
-		case 's': carIsReverse = true;  break;
-		case 'd': carIsRight = true;  break;
-		case 'a': carIsLeft = true;  break;
+
+	case 'p': isPaused = !isPaused; break;
+
+	case 'w': carIsForward = true;  break;
+	case 's': carIsReverse = true;  break;
+	case 'd': carIsRight = true;  break;
+	case 'a': carIsLeft = true;  break;
+
 	}
 }
 
@@ -909,6 +1057,7 @@ void processMouseMotion(int xx, int yy)
 			betaAux = -85.0f;
 		rAux = r;
 	}
+
 	// right mouse button: zoom
 	else if (tracking == 2) {
 
@@ -1005,39 +1154,10 @@ void init()
 	//Model init
 
 	//Cheerio position init
-	float innerStep = 360.0f / NUMBER_INNER_CHEERIOS;
-	for (int i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
-		float aux[4] = { 20.0f, 0.5f, 0.0f, 1.0f };
-		float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
-		rotate(aux, (float)i*innerStep, axisY);
-		cheerioPos[i][0] = aux[0];
-		cheerioPos[i][1] = aux[1];
-		cheerioPos[i][2] = aux[2];
-		cheerioPos[i][3] = aux[3];
-	}
-
-	float outerStep = 360.0f / NUMBER_OUTER_CHEERIOS;
-	for (int i = (int)NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
-		float aux[4] = { 40.0f, 0.5f, 0.0f, 1.0f };
-		float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
-		rotate(aux, (float)i*outerStep, axisY);
-		cheerioPos[i][0] = aux[0];
-		cheerioPos[i][1] = aux[1];
-		cheerioPos[i][2] = aux[2];
-		cheerioPos[i][3] = aux[3];
-	}
+	resetCheerios();
 
 	//Orange position init
-
-	for (int i = 0; i < NUMBER_ORANGES; i++) {
-		orangePos[i][0] = -50.0f;
-		orangePos[i][1] = 1.0f;
-		orangePos[i][2] = -30.0f + (15.0f * (float) i);
-		orangePos[i][3] = 1.0f;
-
-		orangeSpeed[i] = RNG() * 0.6f;
-		orangeAcceleration[i] = RNG() * 0.0001f;
-	}
+	resetOranges();
 
 
 
