@@ -120,8 +120,8 @@ float checkPoint1[3] = { 0.0f, 0.0f, -30.0f };
 float checkPoint2[3] = { -30.0f, 0.0f, 0.0f };
 float checkPoint3[3] = { 0.0f, 0.0f, 30.0f };
 
-float checkPointSize0And2[2] = { 10.5f, 15.0f };
-float checkPointSize1And3[2] = { 15.0f, 10.5f };
+float checkPointSize0And2[2] = { 10.5f, 1.0f };
+float checkPointSize1And3[2] = { 1.0f, 10.5f };
 
 int currentCheckPoint = 0;
 int score = 0;
@@ -479,7 +479,6 @@ void updateScore() {
 
 		if (hasCollided(carPos, carDim, checkPoint2, checkPointSize0And2)) {
 			currentCheckPoint++;
-			std::cout << currentCheckPoint << " + " << score << std::endl;
 		}
 
 		break;
@@ -494,6 +493,7 @@ void updateScore() {
 		if (hasCollided(carPos, carDim, checkPoint0, checkPointSize0And2)) {
 			currentCheckPoint = 0;
 			score++;
+			std::cout << currentCheckPoint << " + " << score << std::endl;
 		}
 
 		break;
