@@ -98,14 +98,15 @@ int startX, startY, tracking = 0;
 float carPos[3] = { 30.0f, 0.0f, 0.0f };
 float carDim[2] = { 1.0f, 1.0f };
 float carDir[3] = { 0.0f, 0.0f, -1.0f };
+
 float carSpeed = 0.0f;
-float carAcc = 0.001f;
-float carBrake = 0.0005f;
-float carReverse = 0.002f;
-float carAngularSpeed = 2.0f;
+float carAcc = 0.002f;
+float carTraction = 0.001f;
+float carBrake = 0.005f;
+float carReverse = 0.001f;
+float carAngularSpeed = 1.5f;
 float carAngle = 0.0f;
 float speedLimit = 0.3f;
-float epsilon = 0.003f;
 
 
 bool carIsForward = false;
@@ -113,7 +114,7 @@ bool carIsReverse = false;
 bool carIsLeft = false;
 bool carIsRight = false;
 
-//------------------[ CHECKPOINTS AND SCORE ]------------------//
+//------------------[ GAME LOGIC ]------------------//
 
 float checkPoint0[3] = { 30.0f, 0.0f, 0.0f };
 float checkPoint1[3] = { 0.0f, 0.0f, -30.0f };
@@ -126,6 +127,8 @@ float checkPointSize1And3[2] = { 1.0f, 10.5f };
 int currentCheckPoint = 0;
 int score = 0;
 
+int lives = 5;
+
 //------------------[ CHEERIOS ]------------------//
 
 #define NUMBER_INNER_CHEERIOS 20.0f
@@ -133,7 +136,10 @@ int score = 0;
 #define NUMBER_CHEERIOS 40
 
 float cheerioPos[NUMBER_CHEERIOS][4];
-float cheerioSide = 1.0f;
+float cheerioDir[NUMBER_CHEERIOS][3] = { };
+float cheerioSpeed[NUMBER_CHEERIOS] = { };
+float cheerioTraction = 0.003f;
+float cheerioDim[2] = { 1.0f, 1.0f };
 
 //------------------[ ORANGES ]------------------//
 
@@ -142,7 +148,7 @@ float cheerioSide = 1.0f;
 float orangePos[NUMBER_ORANGES][4];
 float orangeSpeed[NUMBER_ORANGES];
 float orangeAcceleration[NUMBER_ORANGES];
-float orangeSide = 2.0f;
+float orangeDim[2] = { 2.0f, 2.0f };
 
 //------------------[ LIGHTS ]------------------//
 
@@ -493,15 +499,14 @@ void updateScore() {
 
 		break;
 	case 3:
+
 		if (hasCollided(carPos, carDim, checkPoint0, checkPointSize0And2)) {
 			currentCheckPoint = 0;
 			score++;
-			std::cout << currentCheckPoint << " + " << score << std::endl;
 		}
 
 		break;
 	}
-
 }
 
 // ------------------------------------------------------------
@@ -547,54 +552,96 @@ void updateCamera() {
 	camZ = r * cos(alpha * PI / 180.0f) * cos(beta * PI / 180.0f);
 	camY = r * sin(beta * PI / 180.0f);
 }
+
 void animateCar() {
 	float aux[3];
 
 	if (carIsForward) {
-		if(carSpeed < speedLimit)
+		if (carSpeed >= 0.0f)
 			carSpeed += carAcc;
-		aux[0] = carDir[0] * carSpeed;
-		aux[1] = carDir[1] * carSpeed;
-		aux[2] = carDir[2] * carSpeed;
-		add(carPos, aux, carPos);
-	}
-
-	if (carIsReverse) {
-		if (carSpeed > -speedLimit)
-			carSpeed -= carReverse;
-		aux[0] = carDir[0] * carSpeed;
-		aux[1] = carDir[1] * carSpeed;
-		aux[2] = carDir[2] * carSpeed;
-		add(carPos, aux, carPos);
-	}
-
-	if (!carIsReverse && !carIsForward) {
-		if (carSpeed <= epsilon && carSpeed > 0.0f)
-			carSpeed = 0;
-		else if (carSpeed >= -epsilon && carSpeed < 0.0f)
-			carSpeed = 0;
-		else if (carSpeed > 0)
-			carSpeed -= carBrake;
 		else
 			carSpeed += carBrake;
+
 	}
 
-
-	if (carIsLeft) {
-		rotate(carDir, carAngularSpeed, axisY);
-		carAngle += carAngularSpeed;
-		alpha += carAngularSpeed;
-		updateCamera();
+	else if (carIsReverse) {
+		if (carSpeed <= 0.0f)
+			carSpeed -= carReverse;
+		else
+			carSpeed -= carBrake;
 	}
 
-	else if (carIsRight) {
-		rotate(carDir, -carAngularSpeed, axisY);
-		carAngle -= carAngularSpeed;
-		alpha -= carAngularSpeed;
-		updateCamera();
+	else if (!carIsReverse && !carIsForward) {
+		if (carSpeed <= carTraction && carSpeed >= -carTraction)
+			carSpeed = 0.0f;
+		else if (carSpeed > 0.0f)
+			carSpeed -= carTraction;
+		else
+			carSpeed += carTraction;
 	}
 
+	if (carSpeed > speedLimit)
+		carSpeed = speedLimit;
+	else if (carSpeed < -speedLimit)
+		carSpeed = -speedLimit;
 
+	aux[0] = carDir[0] * carSpeed;
+	aux[1] = carDir[1] * carSpeed;
+	aux[2] = carDir[2] * carSpeed;
+	add(carPos, aux, carPos);
+
+	if (carSpeed != 0.0f) {
+		if (carIsLeft) {
+			rotate(carDir, carAngularSpeed, axisY);
+			carAngle += carAngularSpeed;
+			alpha += carAngularSpeed;
+			updateCamera();
+		}
+
+		else if (carIsRight) {
+			rotate(carDir, -carAngularSpeed, axisY);
+			carAngle -= carAngularSpeed;
+			alpha -= carAngularSpeed;
+			updateCamera();
+		}
+	}
+
+}
+
+void animateCheerios() {
+	float aux[3];
+	for (int i = 0; i < NUMBER_CHEERIOS; i++) {
+
+		if (hasCollided(carPos, carDim, cheerioPos[i], cheerioDim)) {
+
+			if (carSpeed >= 0.0f) {
+				cheerioSpeed[i] = carSpeed;
+				cheerioDir[i][0] = carDir[0];
+				cheerioDir[i][1] = carDir[1];
+				cheerioDir[i][2] = carDir[2];
+			}
+
+			else {
+				cheerioSpeed[i] = -carSpeed;
+				cheerioDir[i][0] = -carDir[0];
+				cheerioDir[i][1] = -carDir[1];
+				cheerioDir[i][2] = -carDir[2];
+			}
+
+			carSpeed = 0;
+		}
+
+		if (cheerioSpeed[i] > cheerioTraction) {
+			cheerioSpeed[i] -= cheerioTraction;
+			aux[0] = cheerioDir[i][0] * cheerioSpeed[i];
+			aux[1] = cheerioDir[i][1] * cheerioSpeed[i];
+			aux[2] = cheerioDir[i][2] * cheerioSpeed[i];
+			add(cheerioPos[i], aux, cheerioPos[i]);
+		}
+
+		else
+			cheerioSpeed[i] = 0.0f;
+	}
 }
 
 void animateOranges() {
@@ -710,6 +757,7 @@ void renderScene(void) {
 	pushMatrix(MODEL);
 
 	animateCar();
+	animateCheerios();
 	updateScore();
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
@@ -1025,7 +1073,7 @@ void init()
 
 	objID = 2;
 	loadMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
-	createTorus(0.5f, 1.0f, 10, 10);
+	createTorus(cheerioDim[1] / 2.0f, cheerioDim[1], 10, 10);
 
 	// Oranges
 	objID = 3;
@@ -1035,7 +1083,7 @@ void init()
 	float specOrange[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	loadMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
-	createSphere(1.0f, 30);
+	createSphere(orangeDim[1] / 2.0f, 30);
 
 	/*----------------- ASSIMP -------------------*/
 
