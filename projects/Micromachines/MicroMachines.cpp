@@ -96,6 +96,7 @@ int startX, startY, tracking = 0;
 //------------------[ CAR ]------------------//
 
 float carPos[3] = { 30.0f, 0.0f, 0.0f };
+float carDim[2] = { 1.0f, 1.0f };
 float carDir[3] = { 0.0f, 0.0f, -1.0f };
 float carSpeed = 0.0f;
 float carAcc = 0.001f;
@@ -119,7 +120,8 @@ float checkPoint1[3] = { 0.0f, 0.0f, -30.0f };
 float checkPoint2[3] = { -30.0f, 0.0f, 0.0f };
 float checkPoint3[3] = { 0.0f, 0.0f, 30.0f };
 
-float checkPointSize = 10.0f;
+float checkPointSize0And2[2] = { 10.5f, 15.0f };
+float checkPointSize1And3[2] = { 15.0f, 10.5f };
 
 int currentCheckPoint = 0;
 int score = 0;
@@ -456,54 +458,40 @@ void refresh(int value)
 	glutTimerFunc(1000/60, refresh, 0); // 60 fps
 }
 
+bool hasCollided(float* obj1Pos, float* obj1Dim, float* obj2Pos, float* obj2Dim) {
+	if (abs(obj1Pos[0] - obj2Pos[0]) > (obj1Dim[0] + obj2Dim[0])) return false;
+	if (abs(obj1Pos[2] - obj2Pos[2]) > (obj1Dim[1] + obj2Dim[1])) return false;
+
+	return true;
+}
+
 void updateScore() {
-	bool carInCheckPointX, carInCheckPointZ;
 
 	switch (currentCheckPoint) {
 	case 0:  // if car's last checkpoint was starting line
-		carInCheckPointX = carPos[0] >= checkPoint1[0] - checkPointSize &&
-			carPos[0] <= checkPoint1[0] + checkPointSize;
 
-		carInCheckPointZ = carPos[2] >= checkPoint1[2] - checkPointSize &&
-			carPos[2] <= checkPoint1[2] + checkPointSize;
-
-		if (carInCheckPointX && carInCheckPointZ) {
+		if (hasCollided(carPos, carDim, checkPoint1, checkPointSize1And3)) {
 			currentCheckPoint++;
 		}
 
 		break;
 	case 1:
-		carInCheckPointX = carPos[0] >= checkPoint2[0] - checkPointSize &&
-			carPos[0] <= checkPoint2[0] + checkPointSize;
 
-		carInCheckPointZ = carPos[2] >= checkPoint2[2] - checkPointSize &&
-			carPos[2] <= checkPoint2[2] + checkPointSize;
-
-		if (carInCheckPointX && carInCheckPointZ) {
+		if (hasCollided(carPos, carDim, checkPoint2, checkPointSize0And2)) {
 			currentCheckPoint++;
+			std::cout << currentCheckPoint << " + " << score << std::endl;
 		}
 
 		break;
 	case 2:
-		carInCheckPointX = carPos[0] >= checkPoint3[0] - checkPointSize &&
-			carPos[0] <= checkPoint3[0] + checkPointSize;
 
-		carInCheckPointZ = carPos[2] >= checkPoint3[2] - checkPointSize &&
-			carPos[2] <= checkPoint3[2] + checkPointSize;
-
-		if (carInCheckPointX && carInCheckPointZ) {
+		if (hasCollided(carPos, carDim, checkPoint3, checkPointSize1And3)) {
 			currentCheckPoint++;
 		}
 
 		break;
 	case 3:
-		carInCheckPointX = carPos[0] >= checkPoint0[0] - checkPointSize &&
-			carPos[0] <= checkPoint0[0] + checkPointSize;
-
-		carInCheckPointZ = carPos[2] >= checkPoint0[2] - checkPointSize &&
-			carPos[2] <= checkPoint0[2] + checkPointSize;
-
-		if (carInCheckPointX && carInCheckPointZ) {
+		if (hasCollided(carPos, carDim, checkPoint0, checkPointSize0And2)) {
 			currentCheckPoint = 0;
 			score++;
 		}

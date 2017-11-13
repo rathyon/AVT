@@ -1,1 +1,3 @@
-﻿
+﻿  MicroMachines.cpp
+c:\users\homepc\documents\github\avt\projects\micromachines\micromachines.cpp(634): warning C4101: 'res': unreferenced local variable
+  Micromachines.vcxproj -> C:\Users\HomePC\Documents\GitHub\AVT\projects\Micromachines\Debug\Micromachines.exe
