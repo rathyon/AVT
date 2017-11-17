@@ -55,7 +55,7 @@ GLuint pid;
 // test cube = 1
 // cheerios = 2
 // orange = 3
-const int objCount = 4;
+const int objCount = 5;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -161,10 +161,27 @@ float orangeDim[2] = { 2.0f, 2.0f };
 float dirLight[4] = { 0.5f, 1.0f, 0.0f, 0.0f };
 float dirLightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+//------------------[ PARTICLES ]------------------//
+
+#define MAX_PARTICLES 20
+#define frand() ((float)rand() / RAND_MAX)
+
+float particlePos[MAX_PARTICLES][3];
+float particleLife[MAX_PARTICLES];
+float particleFade[MAX_PARTICLES];
+float particleRGB[MAX_PARTICLES][3];
+float particleSpeed[MAX_PARTICLES][3];
+float particleAcc[MAX_PARTICLES][3];
+
+bool drawParticles = false;
+int deadParticles = 0;
+
+
 //------------------[ TEXTURES ]------------------//
 
 GLint texMode_UID;
 GLint tex_1_loc;
+//GLint tex_2_loc;
 
 GLuint TextureArray[1];
 
@@ -199,6 +216,7 @@ Assimp::Importer importer;
 float scaleFactor; // scale factor for the scene;
 
 std::vector<struct Mesh> meshes; // for storing imported .OBJ files
+
 
 void set_float4(float f[4], float a, float b, float c, float d){
 	f[0] = a;
@@ -473,6 +491,59 @@ void refresh(int value)
 	glutTimerFunc(1000/60, refresh, 0); // 60 fps
 }
 
+void initParticles()
+{
+	GLfloat v, theta, phi;
+
+	for (int i = 0; i < MAX_PARTICLES; i++)
+	{
+
+		v = 0.3 * frand() + 0.2;
+		phi = frand() * PI;
+		theta = 2.0 * frand() * PI;
+
+
+		particlePos[i][0] = carPos[0];
+		particlePos[i][1] = carPos[1];
+		particlePos[i][2] = carPos[2];
+		particleSpeed[i][0] = v * cos(theta) * sin(phi);
+		particleSpeed[i][1] = v * cos(phi);
+		particleSpeed[i][2] = v * sin(theta) * sin(phi);
+		particleAcc[i][0] = 0.1f;
+		particleAcc[i][1] = -0.15f;
+		particleAcc[i][2] = 0.0f;
+		particleRGB[i][0] = 0.882f;
+		particleRGB[i][1] = 0.552f;
+		particleRGB[i][2] = 0.211f;
+		particleLife[i] = 1.0f;
+		particleFade[i] = 0.005f;
+	}
+}
+
+void iterate(int value)
+{
+	int i;
+	float h;
+	float aux[3];
+
+	/* Método de Euler de integração de eq. diferenciais ordinárias
+	h representa o step de tempo; dv/dt = a; dx/dt = v; e conhecem-se os valores iniciais de x e v */
+	h = 0.125f;
+	for (i = 0; i < MAX_PARTICLES; i++)
+	{
+		particlePos[i][0] += h*particleSpeed[i][0];
+		particlePos[i][1] += h*particleSpeed[i][1];
+		particlePos[i][2] += h*particleSpeed[i][2];
+		particleSpeed[i][0] += h*particleAcc[i][0];
+		particleSpeed[i][1] += h*particleAcc[i][1];
+		particleSpeed[i][2] += h*particleAcc[i][2];
+		particleLife[i] -= particleFade[i];
+	}
+
+	glutTimerFunc(33, iterate, 0);
+
+}
+
 bool hasCollided(float* obj1Pos, float* obj1Dim, float* obj2Pos, float* obj2Dim) {
 	if (abs(obj1Pos[0] - obj2Pos[0]) > (obj1Dim[0] + obj2Dim[0])) return false;
 	if (abs(obj1Pos[2] - obj2Pos[2]) > (obj1Dim[1] + obj2Dim[1])) return false;
@@ -574,8 +645,13 @@ void resetOranges() {
 }
 
 void resetGame() {
+	lives = 5;
+	score = 0;
+	currentCheckPoint = 0;
+	resetCamera();
 	resetCar();
 	resetOranges();
+	resetCheerios();
 }
 
 void collisionWithOranges() {
@@ -589,7 +665,6 @@ void collisionWithOranges() {
 			}
 			else
 				isGameOver = true;
-			// else gameover
 		}
 	}
 }
@@ -613,6 +688,7 @@ void setOrthogonalProjectionForHUD(int w, int h) {
 	loadIdentity(VIEW);
 	lookAt(0.0f, 10.0f, 0.0f, 0.0f, 5.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 }
+
 
 // ------------------------------------------------------------
 //
@@ -718,6 +794,9 @@ void animateCheerios() {
 	for (int i = 0; i < NUMBER_CHEERIOS; i++) {
 
 		if (hasCollided(carPos, carDim, cheerioPos[i], cheerioDim)) {
+			drawParticles = true;
+			initParticles();
+			glutTimerFunc(0, iterate, 0);
 
 			if (carSpeed >= 0.0f) {
 				cheerioSpeed[i] = carSpeed;
@@ -939,6 +1018,24 @@ void renderScene(void) {
 		render();
 	}
 
+	if (drawParticles) {
+		objID = 4;
+		for (int i = 0; i < MAX_PARTICLES; i++) {
+			if (particleLife[i] > 0.0f) {
+				translate(MODEL, particlePos[i][0], particlePos[i][1], particlePos[i][2]);
+				render();
+			}
+
+			else deadParticles++;
+		}
+
+		if (deadParticles == MAX_PARTICLES) {
+			drawParticles = false;
+			deadParticles = 0;
+		}
+	}
+
+
 	pushMatrix(MODEL);
 
 	translate(MODEL, 0.0f, -0.003f, 0.0f);
@@ -975,6 +1072,8 @@ void keyDown(unsigned char key, int xx, int yy)
 		//aliasing settings
 	case 'm': glEnable(GL_MULTISAMPLE); break;
 	case 'n': glDisable(GL_MULTISAMPLE); break;
+	case 'r': resetGame();  break;
+
 
 		//game controls
 
@@ -1151,6 +1250,7 @@ void init()
 	glGenTextures(1, TextureArray);
 	TGA_Texture(TextureArray, "textures/futuristic_grid.tga", 0);
 
+
 	//Model init
 
 	//Cheerio position init
@@ -1204,6 +1304,18 @@ void init()
 
 	loadMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
 	createSphere(orangeDim[1] / 2.0f, 30);
+
+	// Particle
+	objID = 4;
+	float ambParticle[4] = { 0.1f, 0.07f, 0.0f, 1.0f };
+	float diffParticle[4] = { 1.0f, 0.7f, 0.0f, 1.0f };
+	float specParticle[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	loadMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
+	createCube();
+
+
+
 
 	/*----------------- ASSIMP -------------------*/
 
@@ -1283,6 +1395,7 @@ int main(int argc, char **argv) {
 	glutMouseWheelFunc ( mouseWheel ) ;
 	glutTimerFunc(0,timer,0);
 	glutTimerFunc(0, refresh, 0);
+	glutTimerFunc(0, iterate, 0);
 
 
 //	return from main loop
