@@ -169,9 +169,9 @@ float dirLightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 float particlePos[MAX_PARTICLES][3];
 float particleLife[MAX_PARTICLES];
 float particleFade[MAX_PARTICLES];
-float particleRGB[MAX_PARTICLES][3];
+float particleRGB[3] = { 0.882f, 0.552f, 0.211f };
 float particleSpeed[MAX_PARTICLES][3];
-float particleAcc[MAX_PARTICLES][3];
+float particleAcc[3] = { 0.1f, -0.15f, 0.0f };
 
 bool drawParticles = false;
 int deadParticles = 0;
@@ -182,7 +182,6 @@ int deadParticles = 0;
 GLint texMode_UID;
 GLint tex_1_loc;
 //GLint tex_2_loc;
-
 GLuint TextureArray[1];
 
 //------------------[ AUXILIARY FUNCS ]------------------//
@@ -493,28 +492,24 @@ void refresh(int value)
 
 void initParticles()
 {
-	GLfloat v, theta, phi;
+	float v, theta, phi;
 
 	for (int i = 0; i < MAX_PARTICLES; i++)
 	{
 
-		v = 0.3 * frand() + 0.2;
+		v = 0.3f * frand() + 0.2f;
 		phi = frand() * PI;
-		theta = 2.0 * frand() * PI;
+		theta = 2.0f * frand() * PI;
 
 
 		particlePos[i][0] = carPos[0];
 		particlePos[i][1] = carPos[1];
 		particlePos[i][2] = carPos[2];
+
 		particleSpeed[i][0] = v * cos(theta) * sin(phi);
 		particleSpeed[i][1] = v * cos(phi);
 		particleSpeed[i][2] = v * sin(theta) * sin(phi);
-		particleAcc[i][0] = 0.1f;
-		particleAcc[i][1] = -0.15f;
-		particleAcc[i][2] = 0.0f;
-		particleRGB[i][0] = 0.882f;
-		particleRGB[i][1] = 0.552f;
-		particleRGB[i][2] = 0.211f;
+
 		particleLife[i] = 1.0f;
 		particleFade[i] = 0.005f;
 	}
@@ -524,7 +519,6 @@ void iterate(int value)
 {
 	int i;
 	float h;
-	float aux[3];
 
 	/* Método de Euler de integração de eq. diferenciais ordinárias
 	h representa o step de tempo; dv/dt = a; dx/dt = v; e conhecem-se os valores iniciais de x e v */
@@ -534,9 +528,9 @@ void iterate(int value)
 		particlePos[i][0] += h*particleSpeed[i][0];
 		particlePos[i][1] += h*particleSpeed[i][1];
 		particlePos[i][2] += h*particleSpeed[i][2];
-		particleSpeed[i][0] += h*particleAcc[i][0];
-		particleSpeed[i][1] += h*particleAcc[i][1];
-		particleSpeed[i][2] += h*particleAcc[i][2];
+		particleSpeed[i][0] += h*particleAcc[0];
+		particleSpeed[i][1] += h*particleAcc[1];
+		particleSpeed[i][2] += h*particleAcc[2];
 		particleLife[i] -= particleFade[i];
 	}
 
@@ -796,7 +790,6 @@ void animateCheerios() {
 		if (hasCollided(carPos, carDim, cheerioPos[i], cheerioDim)) {
 			drawParticles = true;
 			initParticles();
-			glutTimerFunc(0, iterate, 0);
 
 			if (carSpeed >= 0.0f) {
 				cheerioSpeed[i] = carSpeed;
@@ -1311,11 +1304,8 @@ void init()
 	float diffParticle[4] = { 1.0f, 0.7f, 0.0f, 1.0f };
 	float specParticle[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	loadMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
+	loadMaterials(ambParticle, diffParticle, specParticle, null, shininess, texCount);
 	createCube();
-
-
-
 
 	/*----------------- ASSIMP -------------------*/
 
