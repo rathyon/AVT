@@ -23,11 +23,13 @@ struct LightProperties {
 	vec4 color;
 	vec4 position;
 	vec4 halfVector;
-	vec4 coneDirection;
+	vec3 coneDirection;
+	float spotCosCutoff;
+	float spotExponent;
 	float linearAttenuation;
 };
 
-const int numLights = 1; // HAVE TO SET THIS MANUALLY
+const int numLights = 9; // HAVE TO SET THIS MANUALLY
 
 uniform LightProperties Lights[numLights];
 
@@ -67,11 +69,20 @@ void main() {
 			strength = 1.0f / (length(vec3(Lights[light].position) - DataIn.position)* Lights[light].linearAttenuation);
 
 			// if spotlight...
+			if(Lights[light].isSpotLight){
+				float spotCos = dot(l, -Lights[light].coneDirection);
+
+				if(spotCos < Lights[light].spotCosCutoff)
+					strength = 0.0f;
+				else
+					strength *= pow(spotCos, Lights[light].spotExponent);
+			}
 
 		}
 
 		// directional light
 		else {
+			strength = 1.0f;
 			l = vec3(Lights[light].position);
 			h = normalize(vec3(Lights[light].position) + e);
 		}
@@ -91,7 +102,7 @@ void main() {
 		//texel2 = texture(texmap2, DataIn.tex_coord);
 
 		//colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
-		colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1);
+		colorOut = max(scatteredLight * texel1 + reflectedLight, 0.01*texel1);
 	} else {
 
 	vec4 rgb = min(scatteredLight + reflectedLight, vec4(1.0));

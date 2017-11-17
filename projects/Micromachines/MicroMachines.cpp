@@ -160,6 +160,32 @@ float orangeDim[2] = { 2.0f, 2.0f };
 
 float dirLight[4] = { 0.5f, 1.0f, 0.0f, 0.0f };
 float dirLightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+bool dirLightOn = true;
+
+bool headlightsOn = true;
+float const spotLightInitPos[4] = { carPos[0], carPos[1], carPos[2], carPos[3] };
+float const spotLightInitDir_1[3] = { -1.0f, 0.5f, -1.0f };
+float const spotLightInitDir_2[3] = { 1.0f, 0.5f, -1.0f };
+float spotLightPos[4] = { carPos[0], carPos[1], carPos[2], carPos[3] };
+float spotLightDir_1[3] = { -1.0f, 0.5f, -1.0f };
+float spotLightDir_2[3] = { 1.0f, 0.5f, -1.0f };
+float spotLightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+float spotCosCutoff = 0.97f;
+float spotExponent = 0.01f;
+float linearAttenuation = 0.03f;
+
+bool candlesOn = true;
+float candlePos[6][4] = {
+	{-40.0f, 10.0f, -40.0f, 1.0f},
+	{ -40.0f, 10.0f, 40.0f, 1.0f },
+	{ 40.0f, 10.0f, -40.0f, 1.0f },
+	{ 40.0f, 10.0f, 40.0f, 1.0f },
+	{ 30.0f, 10.0f, 0.0f, 1.0f },
+	{ -30.0f, 10.0f, 0.0f, 1.0f }
+};
+float candleColor[4] = { 0.0f, 0.5f, 1.0f, 1.0f };
+
+float candleAttenuation = 0.2f;
 
 //------------------[ PARTICLES ]------------------//
 
@@ -597,6 +623,18 @@ void resetCar() {
 	carPos[0] = carInitPos[0];
 	carPos[1] = carInitPos[1];
 	carPos[2] = carInitPos[2];
+
+	spotLightPos[0] = spotLightInitPos[0];
+	spotLightPos[1] = spotLightInitPos[1];
+	spotLightPos[2] = spotLightInitPos[2];
+
+	spotLightDir_1[0] = spotLightInitDir_1[0];
+	spotLightDir_1[1] = spotLightInitDir_1[1];
+	spotLightDir_1[2] = spotLightInitDir_1[2];
+
+	spotLightDir_2[0] = spotLightInitDir_2[0];
+	spotLightDir_2[1] = spotLightInitDir_2[1];
+	spotLightDir_2[2] = spotLightInitDir_2[2];
 }
 
 void resetCheerios() {
@@ -764,10 +802,13 @@ void animateCar() {
 	aux[1] = carDir[1] * carSpeed;
 	aux[2] = carDir[2] * carSpeed;
 	add(carPos, aux, carPos);
+	add(spotLightPos, aux, spotLightPos);
 
 	if (carSpeed != 0.0f) {
 		if (carIsLeft) {
 			rotate(carDir, carAngularSpeed, axisY);
+			rotate(spotLightDir_1, carAngularSpeed, axisY);
+			rotate(spotLightDir_2, carAngularSpeed, axisY);
 			carAngle += carAngularSpeed;
 			alpha += carAngularSpeed;
 			updateCamera();
@@ -775,6 +816,8 @@ void animateCar() {
 
 		else if (carIsRight) {
 			rotate(carDir, -carAngularSpeed, axisY);
+			rotate(spotLightDir_1, -carAngularSpeed, axisY);
+			rotate(spotLightDir_2, -carAngularSpeed, axisY);
 			carAngle -= carAngularSpeed;
 			alpha -= carAngularSpeed;
 			updateCamera();
@@ -850,9 +893,10 @@ void sendLights() {
 
 	GLint loc;
 	float res[4];
+	float aux[4];
 
 	loc = glGetUniformLocation(pid, "Lights[0].isEnabled");
-	glUniform1i(loc, true);
+	glUniform1i(loc, dirLightOn);
 	loc = glGetUniformLocation(pid, "Lights[0].isPointLight");
 	glUniform1i(loc, false);
 	loc = glGetUniformLocation(pid, "Lights[0].position");
@@ -860,6 +904,114 @@ void sendLights() {
 	loc = glGetUniformLocation(pid, "Lights[0].color");
 	glUniform4fv(loc, 1, dirLightColor);
 
+	/* LEFT SPOTLIGHT */
+
+	loc = glGetUniformLocation(pid, "Lights[1].isEnabled");
+	glUniform1i(loc, headlightsOn);
+	loc = glGetUniformLocation(pid, "Lights[1].isPointLight");
+	glUniform1i(loc, true);
+	loc = glGetUniformLocation(pid, "Lights[1].isSpotLight");
+	glUniform1i(loc, true);
+
+	aux[0] = spotLightPos[0] + spotLightDir_1[0];
+	aux[1] = spotLightPos[1] + spotLightDir_1[1];
+	aux[2] = spotLightPos[2] + spotLightDir_1[2];
+	aux[3] = spotLightPos[3];
+	multMatrixPoint(VIEW, aux, res);
+	loc = glGetUniformLocation(pid, "Lights[1].position");
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(pid, "Lights[1].color");
+	glUniform4fv(loc, 1, spotLightColor);
+
+	multMatrixPoint(VIEW, carDir, res);
+	loc = glGetUniformLocation(pid, "Lights[1].coneDirection");
+	glUniform3fv(loc, 1, res);
+
+	loc = glGetUniformLocation(pid, "Lights[1].spotCosCutoff");
+	glUniform1f(loc, spotCosCutoff);
+	loc = glGetUniformLocation(pid, "Lights[1].spotExponent");
+	glUniform1f(loc, spotExponent);
+	loc = glGetUniformLocation(pid, "Lights[1].linearAttenuation");
+	glUniform1f(loc, linearAttenuation);
+
+	/* RIGHT SPOTLIGHT */
+
+	loc = glGetUniformLocation(pid, "Lights[2].isEnabled");
+	glUniform1i(loc, headlightsOn);
+	loc = glGetUniformLocation(pid, "Lights[2].isPointLight");
+	glUniform1i(loc, true);
+	loc = glGetUniformLocation(pid, "Lights[2].isSpotLight");
+	glUniform1i(loc, true);
+
+	aux[0] = spotLightPos[0] + spotLightDir_2[0];
+	aux[1] = spotLightPos[1] + spotLightDir_2[1];
+	aux[2] = spotLightPos[2] + spotLightDir_2[2];
+	aux[3] = spotLightPos[3];
+	multMatrixPoint(VIEW, aux, res);
+	loc = glGetUniformLocation(pid, "Lights[2].position");
+	glUniform4fv(loc, 1, res);
+	loc = glGetUniformLocation(pid, "Lights[2].color");
+	glUniform4fv(loc, 1, spotLightColor);
+
+	multMatrixPoint(VIEW, carDir, res);
+	loc = glGetUniformLocation(pid, "Lights[2].coneDirection");
+	glUniform3fv(loc, 1, res);
+
+	loc = glGetUniformLocation(pid, "Lights[2].spotCosCutoff");
+	glUniform1f(loc, spotCosCutoff);
+	loc = glGetUniformLocation(pid, "Lights[2].spotExponent");
+	glUniform1f(loc, spotExponent);
+	loc = glGetUniformLocation(pid, "Lights[2].linearAttenuation");
+	glUniform1f(loc, linearAttenuation);
+
+	/* CANDLE LIGHTS */
+	glUniform1i(glGetUniformLocation(pid, "Lights[3].isEnabled"), candlesOn);
+	glUniform1i(glGetUniformLocation(pid, "Lights[4].isEnabled"), candlesOn);
+	glUniform1i(glGetUniformLocation(pid, "Lights[5].isEnabled"), candlesOn);
+	glUniform1i(glGetUniformLocation(pid, "Lights[6].isEnabled"), candlesOn);
+	glUniform1i(glGetUniformLocation(pid, "Lights[7].isEnabled"), candlesOn);
+	glUniform1i(glGetUniformLocation(pid, "Lights[8].isEnabled"), candlesOn);
+
+	glUniform1i(glGetUniformLocation(pid, "Lights[3].isPointLight"), true);
+	glUniform1i(glGetUniformLocation(pid, "Lights[4].isPointLight"), true);
+	glUniform1i(glGetUniformLocation(pid, "Lights[5].isPointLight"), true);
+	glUniform1i(glGetUniformLocation(pid, "Lights[6].isPointLight"), true);
+	glUniform1i(glGetUniformLocation(pid, "Lights[7].isPointLight"), true);
+	glUniform1i(glGetUniformLocation(pid, "Lights[8].isPointLight"), true);
+
+	glUniform1i(glGetUniformLocation(pid, "Lights[3].isSpotLight"), false);
+	glUniform1i(glGetUniformLocation(pid, "Lights[4].isSpotLight"), false);
+	glUniform1i(glGetUniformLocation(pid, "Lights[5].isSpotLight"), false);
+	glUniform1i(glGetUniformLocation(pid, "Lights[6].isSpotLight"), false);
+	glUniform1i(glGetUniformLocation(pid, "Lights[7].isSpotLight"), false);
+	glUniform1i(glGetUniformLocation(pid, "Lights[8].isSpotLight"), false);
+
+	multMatrixPoint(VIEW, candlePos[0], res);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[3].position"), 1, res);
+	multMatrixPoint(VIEW, candlePos[1], res);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[4].position"), 1, res);
+	multMatrixPoint(VIEW, candlePos[2], res);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[5].position"), 1, res);
+	multMatrixPoint(VIEW, candlePos[3], res);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[6].position"), 1, res);
+	multMatrixPoint(VIEW, candlePos[4], res);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[7].position"), 1, res);
+	multMatrixPoint(VIEW, candlePos[5], res);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[8].position"), 1, res);
+
+	glUniform1f(glGetUniformLocation(pid, "Lights[3].linearAttenuation"), candleAttenuation);
+	glUniform1f(glGetUniformLocation(pid, "Lights[4].linearAttenuation"), candleAttenuation);
+	glUniform1f(glGetUniformLocation(pid, "Lights[5].linearAttenuation"), candleAttenuation);
+	glUniform1f(glGetUniformLocation(pid, "Lights[6].linearAttenuation"), candleAttenuation);
+	glUniform1f(glGetUniformLocation(pid, "Lights[7].linearAttenuation"), candleAttenuation);
+	glUniform1f(glGetUniformLocation(pid, "Lights[8].linearAttenuation"), candleAttenuation);
+
+	glUniform4fv(glGetUniformLocation(pid, "Lights[3].color"), 1, candleColor);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[4].color"), 1, candleColor);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[5].color"), 1, candleColor);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[6].color"), 1, candleColor);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[7].color"), 1, candleColor);
+	glUniform4fv(glGetUniformLocation(pid, "Lights[8].color"), 1, candleColor);
 }
 
 void render() {
@@ -1052,32 +1204,33 @@ void keyDown(unsigned char key, int xx, int yy)
 {
 	switch (key) {
 
-	case 27:
-		glutLeaveMainLoop();
-		break;
+		case 27:
+			glutLeaveMainLoop();
+			break;
 
 		//cameras
-	case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-50, 50, -50, 50, 0.1f, 1000.f); break;
-	case '2': camera = TOP; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
-	case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
+		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-50, 50, -50, 50, 0.1f, 1000.f); break;
+		case '2': camera = TOP; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
+		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
 
 
 		//aliasing settings
-	case 'm': glEnable(GL_MULTISAMPLE); break;
-	case 'n': glDisable(GL_MULTISAMPLE); break;
-	case 'r': resetGame();  break;
-
+		case 'm': glEnable(GL_MULTISAMPLE); break;
+		case 'n': glDisable(GL_MULTISAMPLE); break;
+		case 'r': resetGame();  break;
 
 		//game controls
+		case 'p': isPaused = !isPaused; break;
 
+		case 'w': carIsForward = true;  break;
+		case 's': carIsReverse = true;  break;
+		case 'd': carIsRight = true;  break;
+		case 'a': carIsLeft = true;  break;
 
-	case 'p': isPaused = !isPaused; break;
-
-	case 'w': carIsForward = true;  break;
-	case 's': carIsReverse = true;  break;
-	case 'd': carIsRight = true;  break;
-	case 'a': carIsLeft = true;  break;
-
+		//lights
+		case 'l': dirLightOn = !dirLightOn; break;
+		case 'h': headlightsOn = !headlightsOn; break;
+		case 'c': candlesOn = !candlesOn; break;
 	}
 }
 
@@ -1257,8 +1410,8 @@ void init()
 	// Table
 	objID = 0;
 
-	float ambTable[4] = { 0.2f, 0.1f, 0.0f, 1.0f };
-	float diffTable[4] = { 0.3f, 0.3f, 0.0f, 1.0f };
+	float ambTable[4] = { 0.01f, 0.01f, 0.01f, 1.0f };
+	float diffTable[4] = { 0.3f, 0.3f, 0.3f, 1.0f };
 	float specTable[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	float non_emissive[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float shininess = 10.0f;
