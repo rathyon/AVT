@@ -1,7 +1,9 @@
 #version 330
 
 uniform sampler2D texmap1;
+uniform sampler2D texmap2;
 uniform int texMode;
+uniform float lensAlpha;
 
 out vec4 colorOut;
 
@@ -103,7 +105,17 @@ void main() {
 
 		//colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
 		colorOut = max(scatteredLight * texel1 + reflectedLight, 0.01*texel1);
-	} else {
+	}
+	else if(texMode == 2){
+		texel2 = texture(texmap2, DataIn.tex_coord);
+		if (texel2.a != 0) {
+            texel2.a = lensAlpha;
+            colorOut = texel2;
+		}
+        else
+           colorOut = texel2;
+	}
+	else {
 
 	vec4 rgb = min(scatteredLight + reflectedLight, vec4(1.0));
 

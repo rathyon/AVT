@@ -207,17 +207,18 @@ int deadParticles = 0;
 //------------------[ LENS FLARE ]------------------//
 #define FLARE_ELEMENTS 5
 
-float lensPos[FLARE_ELEMENTS] = { 0.0f, 0.3f, 0.5f, 0.8f, 1.0f };
+float lensPos[FLARE_ELEMENTS] = { 0.0f, 0.3f, 0.4f, 0.8f, 1.0f };
 float lensScale[FLARE_ELEMENTS] = { 1.0f, 0.3f, 0.5f, 0.3f, 0.8f };
-float lensSourcePos[2] = {0.8f ,0.8f};
+float lensSourcePos[2] = { 0.8f, 0.8f };
 
 //------------------[ TEXTURES ]------------------//
 
 GLint texMode_UID;
 GLint tex_1_loc;
+GLint tex_2_loc;
 
 //GLint tex_2_loc;
-GLuint TextureArray[1];
+GLuint TextureArray[4];
 
 //------------------[ AUXILIARY FUNCS ]------------------//
 
@@ -1059,9 +1060,40 @@ void render() {
 
 }
 
+void selectTextureForFlare(int i) {
+	switch (i) {
+	case 0:
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
+		glUniform1i(tex_2_loc, 1);
+		break;
+	case 1:
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
+		glUniform1i(tex_2_loc, 2);
+		break;
+	case 2:
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, TextureArray[3]);
+		glUniform1i(tex_2_loc, 3);
+		break;
+	case 3:
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
+		glUniform1i(tex_2_loc, 2);
+		break;
+	case 4:
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
+		glUniform1i(tex_2_loc, 1);
+		break;
+	}
+}
+
 void newFlare() {
 	float cx, cy; //center of window
 	float lx, ly; //relative pos of "source light"
+	GLint loc;
 
 	cx = (float)WinX / 2.0f;
 	cy = (float)WinY / 2.0f;
@@ -1076,6 +1108,10 @@ void newFlare() {
 	ratio = (maxdist - dist) / maxdist;
 
 	float scalefactor = 0.3f + (ratio * 0.8f);
+	float alphafactor = 0.2f + (ratio * 0.15f);
+
+	loc = glGetUniformLocation(pid, "lensAlpha");
+	glUniform1f(loc, alphafactor);
 
 	// dx and dy are the opposite ends
 	float dx, dy;
@@ -1091,6 +1127,7 @@ void newFlare() {
 	glDisable(GL_CULL_FACE);
 	ortho(0, WinX, 0, WinY, -1, 1);
 
+
 	// position of element
 	float px, py;
 	for (int i = 0; i < FLARE_ELEMENTS; i++) {
@@ -1098,10 +1135,16 @@ void newFlare() {
 		px = (1.0f - lensPos[i])*lx + lensPos[i] * dx;
 		py = (1.0f - lensPos[i])*ly + lensPos[i] * dy;
 
+		selectTextureForFlare(i);
+		
+		
 		objID = 5;
 		translate(MODEL, px, py, 0);
 		scale(MODEL, 50 * lensScale[i] * scalefactor, 50 * lensScale[i] * scalefactor, 0);
+		glUniform1i(texMode_UID, 2);
 		render();
+		glUniform1i(texMode_UID, 0);
+
 
 	}
 
@@ -1477,8 +1520,7 @@ GLuint setupShaders() {
 	// texMode = on or off
 	texMode_UID = glGetUniformLocation(shader.getProgramIndex(), "texMode");
 	tex_1_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
-
-	//tex_2_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
+	tex_2_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
 	
 	printf("InfoLog for Hello World Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
@@ -1506,8 +1548,12 @@ void init()
 {
 	updateCamera();
 
-	glGenTextures(1, TextureArray);
+	glGenTextures(4, TextureArray);
 	TGA_Texture(TextureArray, "textures/futuristic_grid.tga", 0);
+	TGA_Texture(TextureArray, "textures/hexagon.tga", 1);
+	TGA_Texture(TextureArray, "textures/ring.tga", 2);
+	TGA_Texture(TextureArray, "textures/sourcelight.tga", 3);
+
 
 	//Model init
 
