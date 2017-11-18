@@ -209,6 +209,7 @@ int deadParticles = 0;
 
 float lensPos[FLARE_ELEMENTS] = { 0.0f, 0.3f, 0.4f, 0.8f, 1.0f };
 float lensScale[FLARE_ELEMENTS] = { 1.0f, 0.3f, 0.5f, 0.3f, 0.8f };
+float lensDefaultSourcePos[2] = { 0.8f, 0.8f };
 float lensSourcePos[2] = { 0.8f, 0.8f };
 
 //------------------[ TEXTURES ]------------------//
@@ -619,13 +620,6 @@ void updateScore() {
 		break;
 	}
 }
-
-void resetCamera() {
-	alpha = 0.0f;
-	beta = 30.0f;
-	r = 15.0f;
-}
-
 void resetCar() {
 	carSpeed = 0.0f;
 	carAngle = 0.0f;
@@ -687,33 +681,6 @@ void resetOranges() {
 
 		orangeSpeed[i] = RNG() * 0.6f;
 		orangeAcceleration[i] = RNG() * 0.0001f;
-	}
-}
-
-void resetGame() {
-	isGameOver = false;
-	isPaused = false;
-	lives = 5;
-	score = 0;
-	currentCheckPoint = 0;
-	resetCamera();
-	resetCar();
-	resetOranges();
-	resetCheerios();
-}
-
-void collisionWithOranges() {
-	for (int i = 0; i < NUMBER_ORANGES; i++) {
-		if (hasCollided(carPos, carDim, orangePos[i], orangeDim)) {
-			if (lives > 1) {
-				lives--;
-				resetCamera();
-				resetCar();
-				resetOranges();
-			}
-			else
-				isGameOver = true;
-		}
 	}
 }
 
@@ -782,6 +749,44 @@ void updateCamera() {
 	camY = r * sin(beta * PI / 180.0f);
 }
 
+void resetCamera() {
+	alpha = 0.0f;
+	beta = 30.0f;
+	r = 15.0f;
+	updateCamera();
+}
+
+void collisionWithOranges() {
+	for (int i = 0; i < NUMBER_ORANGES; i++) {
+		if (hasCollided(carPos, carDim, orangePos[i], orangeDim)) {
+			if (lives > 1) {
+				lives--;
+				currentCheckPoint = 0;
+				resetCamera();
+				resetCar();
+				resetOranges();
+			}
+			else {
+				lives--;
+				isGameOver = true;
+			}
+		}
+	}
+}
+
+void resetGame() {
+	isGameOver = false;
+	isPaused = false;
+	lives = 5;
+	score = 0;
+	currentCheckPoint = 0;
+	resetCamera();
+	resetCar();
+	resetOranges();
+	resetCheerios();
+}
+
+
 void animateCar() {
 	float aux[3];
 
@@ -821,22 +826,24 @@ void animateCar() {
 	add(spotLightPos, aux, spotLightPos);
 
 	if (carSpeed != 0.0f) {
-		if (carIsLeft) {
+		if ((carIsLeft && carSpeed > 0.0f) || (carIsRight && carSpeed < 0.0f)) {
 			rotate(carDir, carAngularSpeed, axisY);
 			rotate(spotLightDir_1, carAngularSpeed, axisY);
 			rotate(spotLightDir_2, carAngularSpeed, axisY);
 			carAngle += carAngularSpeed;
 			alpha += carAngularSpeed;
-			updateCamera();
+			if (tracking != 1)
+				updateCamera();
 		}
 
-		else if (carIsRight) {
+		else if (carIsRight && carSpeed > 0.0f || (carIsLeft && carSpeed < 0.0f)) {
 			rotate(carDir, -carAngularSpeed, axisY);
 			rotate(spotLightDir_1, -carAngularSpeed, axisY);
 			rotate(spotLightDir_2, -carAngularSpeed, axisY);
 			carAngle -= carAngularSpeed;
 			alpha -= carAngularSpeed;
-			updateCamera();
+			if (tracking != 1)
+				updateCamera();
 		}
 	}
 
@@ -1125,7 +1132,7 @@ void newFlare() {
 	loadIdentity(VIEW);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
-	ortho(0, WinX, 0, WinY, -1, 1);
+	ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
 
 
 	// position of element
@@ -1228,7 +1235,7 @@ void renderScene(void) {
 
 	if (!isPaused && !isGameOver) {
 		animateCar();
-		//animateOranges();
+		animateOranges();
 		animateCheerios();
 	}
 
@@ -1345,8 +1352,20 @@ void keyDown(unsigned char key, int xx, int yy)
 			break;
 
 		//cameras
-		case '1': camera = ORTHOGRAPHIC; loadIdentity(PROJECTION); ortho(-50, 50, -50, 50, 0.1f, 1000.f); break;
-		case '2': camera = TOP; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
+		case '1':
+			camera = ORTHOGRAPHIC;
+			loadIdentity(PROJECTION);
+			ortho(-50, 50, -50, 50, 0.1f, 1000.f);
+			lensSourcePos[0] = lensDefaultSourcePos[0];
+			lensSourcePos[1] = lensDefaultSourcePos[1];
+			break;
+		case '2':
+			camera = TOP;
+			loadIdentity(PROJECTION);
+			perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f);
+			lensSourcePos[0] = lensDefaultSourcePos[0];
+			lensSourcePos[1] = lensDefaultSourcePos[1];
+			break;
 		case '3': camera = CHASE; loadIdentity(PROJECTION); perspective(53.13f, (1.0f*WinX) / WinY, 0.1f, 1000.0f); break;
 
 
@@ -1440,21 +1459,23 @@ void processMouseMotion(int xx, int yy)
 
 		//lens flare source movement
 
-		float stepX = (float)deltaX * 0.0001f;
-		float stepY = (float)deltaY * 0.0001f;
+		if (camera == CHASE) {
+			float stepX = (float)deltaX * 0.0001f;
+			float stepY = (float)deltaY * 0.0001f;
 
-		lensSourcePos[0] += stepX;
-		lensSourcePos[1] += stepY;
+			lensSourcePos[0] += stepX;
+			lensSourcePos[1] += stepY;
 
-		if (lensSourcePos[0] > 1.0f)
-			lensSourcePos[0] = 1.0f;
-		else if (lensSourcePos[0] < 0.0f)
-			lensSourcePos[0] = 0.0f;
+			if (lensSourcePos[0] > 1.0f)
+				lensSourcePos[0] = 1.0f;
+			else if (lensSourcePos[0] < 0.0f)
+				lensSourcePos[0] = 0.0f;
 
-		if (lensSourcePos[1] > 1.0f)
-			lensSourcePos[1] = 1.0f;
-		else if (lensSourcePos[1] < 0.0f)
-			lensSourcePos[1] = 0.0f;
+			if (lensSourcePos[1] > 1.0f)
+				lensSourcePos[1] = 1.0f;
+			else if (lensSourcePos[1] < 0.0f)
+				lensSourcePos[1] = 0.0f;
+		}
 
 	}
 
