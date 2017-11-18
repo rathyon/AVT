@@ -55,7 +55,7 @@ GLuint pid;
 // test cube = 1
 // cheerios = 2
 // orange = 3
-const int objCount = 5;
+const int objCount = 10;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -202,11 +202,27 @@ float particleAcc[3] = { 0.1f, -0.15f, 0.0f };
 bool drawParticles = false;
 int deadParticles = 0;
 
+//------------------[ LENS FLARE ]------------------//
+
+float lensScale = 1.0f;
+float lensElementMaxSize = 1.0f;
+
+// Lens Elements Properties
+#define MAX_LENS_FLARE_ELEMENTS 5
+#define HEIGHTFROMWIDTH(w)  ((320*(w)*WinY)/(240*WinX))
+
+float lensElementsPos[MAX_LENS_FLARE_ELEMENTS][3];
+float lensElementsDistance[MAX_LENS_FLARE_ELEMENTS] = { 0.0f, 0.0f, -0.001f, -0.002f, -0.005f };
+float lensElementsSize[MAX_LENS_FLARE_ELEMENTS] = { 1.0f, 0.05f, 0.02f, 0.025f, 0.015f };
+float lensElementsDiff[MAX_LENS_FLARE_ELEMENTS][4];
+
+
 
 //------------------[ TEXTURES ]------------------//
 
 GLint texMode_UID;
 GLint tex_1_loc;
+
 //GLint tex_2_loc;
 GLuint TextureArray[1];
 
@@ -549,15 +565,17 @@ void iterate(int value)
 	/* Método de Euler de integração de eq. diferenciais ordinárias
 	h representa o step de tempo; dv/dt = a; dx/dt = v; e conhecem-se os valores iniciais de x e v */
 	h = 0.125f;
-	for (i = 0; i < MAX_PARTICLES; i++)
-	{
-		particlePos[i][0] += h*particleSpeed[i][0];
-		particlePos[i][1] += h*particleSpeed[i][1];
-		particlePos[i][2] += h*particleSpeed[i][2];
-		particleSpeed[i][0] += h*particleAcc[0];
-		particleSpeed[i][1] += h*particleAcc[1];
-		particleSpeed[i][2] += h*particleAcc[2];
-		particleLife[i] -= particleFade[i];
+	if (!isPaused) {
+		for (i = 0; i < MAX_PARTICLES; i++)
+		{
+			particlePos[i][0] += h*particleSpeed[i][0];
+			particlePos[i][1] += h*particleSpeed[i][1];
+			particlePos[i][2] += h*particleSpeed[i][2];
+			particleSpeed[i][0] += h*particleAcc[0];
+			particleSpeed[i][1] += h*particleAcc[1];
+			particleSpeed[i][2] += h*particleAcc[2];
+			particleLife[i] -= particleFade[i];
+		}
 	}
 
 	glutTimerFunc(33, iterate, 0);
@@ -600,6 +618,8 @@ void updateScore() {
 		if (hasCollided(carPos, carDim, checkPoint0, checkPointSize0And2)) {
 			currentCheckPoint = 0;
 			score++;
+			drawParticles = true;
+			initParticles();
 		}
 
 		break;
@@ -677,6 +697,8 @@ void resetOranges() {
 }
 
 void resetGame() {
+	isGameOver = false;
+	isPaused = false;
 	lives = 5;
 	score = 0;
 	currentCheckPoint = 0;
@@ -886,6 +908,52 @@ void animateOranges() {
 		}
 
 	}
+
+}
+
+void renderFlare() {
+	float screenCenterX, screenCenterY;
+	float maxFlareDistance, flareDistance;
+	float flareMaxSize, flareScale;
+	float destination[3], position[3];
+	float width, height;
+	float alpha;
+
+	screenCenterX = (float)WinX / 2.0f;
+	screenCenterY = (float)WinY / 2.0f;
+
+	maxFlareDistance = sqrt(screenCenterX*screenCenterX + screenCenterY*screenCenterY);
+	flareDistance = sqrt((dirLight[0] - screenCenterX)*(dirLight[0] - screenCenterX) + (dirLight[1] - screenCenterY)*(dirLight[1] - screenCenterY));
+	flareDistance = maxFlareDistance - flareDistance;
+
+	flareMaxSize = (float)WinX * lensElementMaxSize;
+	flareScale = (float)WinX * lensScale;
+
+	destination[0] = screenCenterX + (screenCenterX - dirLight[0]);
+	destination[1] = screenCenterY + (screenCenterY - dirLight[1]);
+	destination[2] = camZ + (camZ - dirLight[2]);
+
+	for (int i = 0; i < MAX_LENS_FLARE_ELEMENTS; i++) {
+		position[0] = (1.0f - lensElementsDistance[i]) * dirLight[0] + lensElementsDistance[i] * destination[0];
+		position[1] = (1.0f - lensElementsDistance[i]) * dirLight[1] + lensElementsDistance[i] * destination[1];
+		position[2] = (1.0f - lensElementsDistance[i]) * dirLight[2] + lensElementsDistance[i] * destination[2];
+
+		width = (flareDistance * flareScale * lensElementsSize[i]) / maxFlareDistance;
+
+		if (width > maxFlareDistance)
+		{
+			width = maxFlareDistance;
+		}
+
+		height = HEIGHTFROMWIDTH(width);
+		alpha = (flareDistance * (lensElementsDiff[i][3])) / maxFlareDistance;
+
+		lensElementsDiff[i][3] = alpha;
+		lensElementsPos[i][0] = dirLight[0] - width / 2;
+		lensElementsPos[i][1] = dirLight[1] - height / 2;
+		lensElementsPos[i][2] = dirLight[2] - (lensElementsDistance[i] * 10000.0f);
+	}
+
 
 }
 
@@ -1110,12 +1178,8 @@ void renderScene(void) {
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
-
-	//glActiveTexture(GL_TEXTURE1);
-	//glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
-
 	glUniform1i(tex_1_loc, 0);
-	//glUniform1i(tex_2_loc, 1);
+
 
 	pushMatrix(MODEL);
 
@@ -1179,6 +1243,15 @@ void renderScene(void) {
 			deadParticles = 0;
 		}
 	}
+
+	// Lens Flare Objects
+	renderFlare();
+	for (int i = 5; i < 9; i++) {
+		objID = i;
+		translate(MODEL, lensElementsPos[i-5][0], lensElementsPos[i-5][1], lensElementsPos[i-5][2]);
+		render();
+	}
+
 
 
 	pushMatrix(MODEL);
@@ -1365,6 +1438,7 @@ GLuint setupShaders() {
 	// texMode = on or off
 	texMode_UID = glGetUniformLocation(shader.getProgramIndex(), "texMode");
 	tex_1_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
+
 	//tex_2_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
 	
 	printf("InfoLog for Hello World Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
@@ -1395,7 +1469,6 @@ void init()
 
 	glGenTextures(1, TextureArray);
 	TGA_Texture(TextureArray, "textures/futuristic_grid.tga", 0);
-
 
 	//Model init
 
@@ -1459,6 +1532,54 @@ void init()
 
 	loadMaterials(ambParticle, diffParticle, specParticle, null, shininess, texCount);
 	createCube();
+
+
+	// Lens Flare objects
+	objID = 5;
+	float ambLensFlare[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	lensElementsDiff[0][0] = 1.0f;
+	lensElementsDiff[0][1] = 1.0f;
+	lensElementsDiff[0][2] = 1.0f;
+	lensElementsDiff[0][3] = 1.0f;
+	float specLensFlare[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float emissiveLensFlare[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	loadMaterials(ambLensFlare, lensElementsDiff[0], specLensFlare, emissiveLensFlare, shininess, texCount);
+	createQuad(2, 2);
+
+	objID = 6;
+	lensElementsDiff[1][0] = 0.93f;
+	lensElementsDiff[1][1] = 0.85f;
+	lensElementsDiff[1][2] = 0.75f;
+	lensElementsDiff[1][3] = 1.0f;
+	loadMaterials(ambLensFlare, lensElementsDiff[1], specLensFlare, emissiveLensFlare, shininess, texCount);
+	createQuad(2, 2);
+
+	objID = 7;
+	lensElementsDiff[2][0] = 0.9f;
+	lensElementsDiff[2][1] = 0.76f;
+	lensElementsDiff[2][2] = 0.57f;
+	lensElementsDiff[2][3] = 1.0f;
+	loadMaterials(ambLensFlare, lensElementsDiff[2], specLensFlare, emissiveLensFlare, shininess, texCount);
+	createQuad(2, 2);
+
+	objID = 8;
+	lensElementsDiff[3][0] = 0.95f;
+	lensElementsDiff[3][1] = 0.64f;
+	lensElementsDiff[3][2] = 0.58f;
+	lensElementsDiff[3][3] = 1.0f;
+	loadMaterials(ambLensFlare, lensElementsDiff[3], specLensFlare, emissiveLensFlare, shininess, texCount);
+	createQuad(2, 2);
+
+	objID = 9;
+	lensElementsDiff[4][0] = 0.91f;
+	lensElementsDiff[4][1] = 0.69f;
+	lensElementsDiff[4][2] = 0.73f;
+	lensElementsDiff[4][3] = 1.0f;
+	loadMaterials(ambLensFlare, lensElementsDiff[4], specLensFlare, emissiveLensFlare, shininess, texCount);
+	createQuad(2, 2);
+
+
+
 
 	/*----------------- ASSIMP -------------------*/
 
