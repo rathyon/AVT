@@ -31,5 +31,7 @@ void main () {
 
 	gl_Position = m_pvm * position;
 
-	fogFactor = clamp((80 - length(DataOut.eye))/ (80 - 20), 0, 1);
+	//fogFactor = clamp((80 - length(DataOut.eye))/ (80 - 20), 0, 1); //GL_LINEAR formula
+
+	fogFactor = exp((-0.01f * length(DataOut.eye)));  // GL_EXP2 formula
 }

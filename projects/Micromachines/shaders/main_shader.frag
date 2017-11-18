@@ -108,7 +108,7 @@ void main() {
 		//texel2 = texture(texmap2, DataIn.tex_coord);
 
 		//vec4 preFogColor = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
-		vec4 preFogColor = max(scatteredLight * texel1 + reflectedLight, 0.01*texel1);
+		vec4 preFogColor = max(scatteredLight * texel1 + reflectedLight, (0.01*texel1));
 		colorOut = mix(fogColor, preFogColor, fogFactor);
 
 	}
