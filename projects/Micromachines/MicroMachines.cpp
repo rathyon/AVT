@@ -55,7 +55,9 @@ GLuint pid;
 // test cube = 1
 // cheerios = 2
 // orange = 3
-const int objCount = 10;
+// particle = 4
+// flare element = 5
+const int objCount = 6;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -203,20 +205,11 @@ bool drawParticles = false;
 int deadParticles = 0;
 
 //------------------[ LENS FLARE ]------------------//
+#define FLARE_ELEMENTS 5
 
-float lensScale = 1.0f;
-float lensElementMaxSize = 1.0f;
-
-// Lens Elements Properties
-#define MAX_LENS_FLARE_ELEMENTS 5
-#define HEIGHTFROMWIDTH(w)  ((320*(w)*WinY)/(240*WinX))
-
-float lensElementsPos[MAX_LENS_FLARE_ELEMENTS][3];
-float lensElementsDistance[MAX_LENS_FLARE_ELEMENTS] = { 0.0f, 0.0f, -0.001f, -0.002f, -0.005f };
-float lensElementsSize[MAX_LENS_FLARE_ELEMENTS] = { 1.0f, 0.05f, 0.02f, 0.025f, 0.015f };
-float lensElementsDiff[MAX_LENS_FLARE_ELEMENTS][4];
-
-
+float lensPos[FLARE_ELEMENTS] = { 0.0f, 0.3f, 0.5f, 0.8f, 1.0f };
+float lensScale[FLARE_ELEMENTS] = { 1.0f, 0.3f, 0.5f, 0.3f, 0.8f };
+float lensSourcePos[2] = {0.8f ,0.8f};
 
 //------------------[ TEXTURES ]------------------//
 
@@ -911,52 +904,6 @@ void animateOranges() {
 
 }
 
-void renderFlare() {
-	float screenCenterX, screenCenterY;
-	float maxFlareDistance, flareDistance;
-	float flareMaxSize, flareScale;
-	float destination[3], position[3];
-	float width, height;
-	float alpha;
-
-	screenCenterX = (float)WinX / 2.0f;
-	screenCenterY = (float)WinY / 2.0f;
-
-	maxFlareDistance = sqrt(screenCenterX*screenCenterX + screenCenterY*screenCenterY);
-	flareDistance = sqrt((dirLight[0] - screenCenterX)*(dirLight[0] - screenCenterX) + (dirLight[1] - screenCenterY)*(dirLight[1] - screenCenterY));
-	flareDistance = maxFlareDistance - flareDistance;
-
-	flareMaxSize = (float)WinX * lensElementMaxSize;
-	flareScale = (float)WinX * lensScale;
-
-	destination[0] = screenCenterX + (screenCenterX - dirLight[0]);
-	destination[1] = screenCenterY + (screenCenterY - dirLight[1]);
-	destination[2] = camZ + (camZ - dirLight[2]);
-
-	for (int i = 0; i < MAX_LENS_FLARE_ELEMENTS; i++) {
-		position[0] = (1.0f - lensElementsDistance[i]) * dirLight[0] + lensElementsDistance[i] * destination[0];
-		position[1] = (1.0f - lensElementsDistance[i]) * dirLight[1] + lensElementsDistance[i] * destination[1];
-		position[2] = (1.0f - lensElementsDistance[i]) * dirLight[2] + lensElementsDistance[i] * destination[2];
-
-		width = (flareDistance * flareScale * lensElementsSize[i]) / maxFlareDistance;
-
-		if (width > maxFlareDistance)
-		{
-			width = maxFlareDistance;
-		}
-
-		height = HEIGHTFROMWIDTH(width);
-		alpha = (flareDistance * (lensElementsDiff[i][3])) / maxFlareDistance;
-
-		lensElementsDiff[i][3] = alpha;
-		lensElementsPos[i][0] = dirLight[0] - width / 2;
-		lensElementsPos[i][1] = dirLight[1] - height / 2;
-		lensElementsPos[i][2] = dirLight[2] - (lensElementsDistance[i] * 10000.0f);
-	}
-
-
-}
-
 void sendLights() {
 
 	GLint loc;
@@ -1112,6 +1059,59 @@ void render() {
 
 }
 
+void newFlare() {
+	float cx, cy; //center of window
+	float lx, ly; //relative pos of "source light"
+
+	cx = (float)WinX / 2.0f;
+	cy = (float)WinY / 2.0f;
+
+	lx = (float)WinX * lensSourcePos[0];
+	ly = (float)WinY * lensSourcePos[1];
+
+	float maxdist, dist, ratio;
+
+	maxdist = sqrt((cx*cx) + (cy*cy));
+	dist = sqrt((lx - cx)*(lx - cx) + (ly - cy)*(ly - cy));
+	ratio = (maxdist - dist) / maxdist;
+
+	float scalefactor = 0.3f + (ratio * 0.8f);
+
+	// dx and dy are the opposite ends
+	float dx, dy;
+
+	dx = cx + (cx - lx);
+	dy = cy + (cy - ly);
+
+	pushMatrix(PROJECTION);
+	pushMatrix(VIEW);
+	loadIdentity(PROJECTION);
+	loadIdentity(VIEW);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	ortho(0, WinX, 0, WinY, -1, 1);
+
+	// position of element
+	float px, py;
+	for (int i = 0; i < FLARE_ELEMENTS; i++) {
+
+		px = (1.0f - lensPos[i])*lx + lensPos[i] * dx;
+		py = (1.0f - lensPos[i])*ly + lensPos[i] * dy;
+
+		objID = 5;
+		translate(MODEL, px, py, 0);
+		scale(MODEL, 50 * lensScale[i] * scalefactor, 50 * lensScale[i] * scalefactor, 0);
+		render();
+
+	}
+
+	popMatrix(PROJECTION);
+	popMatrix(VIEW);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+}
+
 void displayLives(int w, int h) {
 	float x, z, ratio;
 	ratio = (float)w / h;
@@ -1185,7 +1185,7 @@ void renderScene(void) {
 
 	if (!isPaused && !isGameOver) {
 		animateCar();
-		animateOranges();
+		//animateOranges();
 		animateCheerios();
 	}
 
@@ -1245,14 +1245,33 @@ void renderScene(void) {
 	}
 
 	// Lens Flare Objects
+	/** /
 	renderFlare();
 	for (int i = 5; i < 9; i++) {
 		objID = i;
-		translate(MODEL, lensElementsPos[i-5][0], lensElementsPos[i-5][1], lensElementsPos[i-5][2]);
+		translate(MODEL, lensElementsPos[i - 5][0], lensElementsPos[i - 5][1], lensElementsPos[i - 5][2]);
 		render();
 	}
 
+	pushMatrix(PROJECTION);
+	pushMatrix(VIEW);
+	loadIdentity(PROJECTION);
+	loadIdentity(VIEW);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	ortho(0, WinX, 0, WinY, -1, 1);
 
+	objID = 1;
+	translate(MODEL, WinX / 2, WinY / 2, 0);
+	scale(MODEL, 50, 50, 0);
+	render();
+
+	popMatrix(PROJECTION);
+	popMatrix(VIEW);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	/**/
 
 	pushMatrix(MODEL);
 
@@ -1262,6 +1281,7 @@ void renderScene(void) {
 
 	popMatrix(MODEL);
 
+	newFlare();
 
 	popMatrix(MODEL);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1374,6 +1394,25 @@ void processMouseMotion(int xx, int yy)
 		else if (betaAux < -85.0f)
 			betaAux = -85.0f;
 		rAux = r;
+
+		//lens flare source movement
+
+		float stepX = (float)deltaX * 0.0001f;
+		float stepY = (float)deltaY * 0.0001f;
+
+		lensSourcePos[0] += stepX;
+		lensSourcePos[1] += stepY;
+
+		if (lensSourcePos[0] > 1.0f)
+			lensSourcePos[0] = 1.0f;
+		else if (lensSourcePos[0] < 0.0f)
+			lensSourcePos[0] = 0.0f;
+
+		if (lensSourcePos[1] > 1.0f)
+			lensSourcePos[1] = 1.0f;
+		else if (lensSourcePos[1] < 0.0f)
+			lensSourcePos[1] = 0.0f;
+
 	}
 
 	// right mouse button: zoom
@@ -1478,8 +1517,6 @@ void init()
 	//Orange position init
 	resetOranges();
 
-
-
 	// Table
 	objID = 0;
 
@@ -1533,53 +1570,14 @@ void init()
 	loadMaterials(ambParticle, diffParticle, specParticle, null, shininess, texCount);
 	createCube();
 
-
-	// Lens Flare objects
+	// Lens Flare quad
 	objID = 5;
-	float ambLensFlare[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	lensElementsDiff[0][0] = 1.0f;
-	lensElementsDiff[0][1] = 1.0f;
-	lensElementsDiff[0][2] = 1.0f;
-	lensElementsDiff[0][3] = 1.0f;
-	float specLensFlare[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	float emissiveLensFlare[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	loadMaterials(ambLensFlare, lensElementsDiff[0], specLensFlare, emissiveLensFlare, shininess, texCount);
+	float ambFlare[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float diffFlare[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float specFlare[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	loadMaterials(ambFlare, diffFlare, specFlare, null, shininess, texCount);
 	createQuad(2, 2);
-
-	objID = 6;
-	lensElementsDiff[1][0] = 0.93f;
-	lensElementsDiff[1][1] = 0.85f;
-	lensElementsDiff[1][2] = 0.75f;
-	lensElementsDiff[1][3] = 1.0f;
-	loadMaterials(ambLensFlare, lensElementsDiff[1], specLensFlare, emissiveLensFlare, shininess, texCount);
-	createQuad(2, 2);
-
-	objID = 7;
-	lensElementsDiff[2][0] = 0.9f;
-	lensElementsDiff[2][1] = 0.76f;
-	lensElementsDiff[2][2] = 0.57f;
-	lensElementsDiff[2][3] = 1.0f;
-	loadMaterials(ambLensFlare, lensElementsDiff[2], specLensFlare, emissiveLensFlare, shininess, texCount);
-	createQuad(2, 2);
-
-	objID = 8;
-	lensElementsDiff[3][0] = 0.95f;
-	lensElementsDiff[3][1] = 0.64f;
-	lensElementsDiff[3][2] = 0.58f;
-	lensElementsDiff[3][3] = 1.0f;
-	loadMaterials(ambLensFlare, lensElementsDiff[3], specLensFlare, emissiveLensFlare, shininess, texCount);
-	createQuad(2, 2);
-
-	objID = 9;
-	lensElementsDiff[4][0] = 0.91f;
-	lensElementsDiff[4][1] = 0.69f;
-	lensElementsDiff[4][2] = 0.73f;
-	lensElementsDiff[4][3] = 1.0f;
-	loadMaterials(ambLensFlare, lensElementsDiff[4], specLensFlare, emissiveLensFlare, shininess, texCount);
-	createQuad(2, 2);
-
-
-
 
 	/*----------------- ASSIMP -------------------*/
 
