@@ -15,6 +15,8 @@ out Data {
 	vec2 tex_coord;
 } DataOut;
 
+out float fogFactor;
+
 void main () {
 
 	vec4 pos = m_viewModel * position;
@@ -27,5 +29,7 @@ void main () {
 
 	DataOut.tex_coord = texCoord.st;
 
-	gl_Position = m_pvm * position;	
+	gl_Position = m_pvm * position;
+
+	fogFactor = clamp((80 - length(DataOut.eye))/ (80 - 20), 0, 1);
 }

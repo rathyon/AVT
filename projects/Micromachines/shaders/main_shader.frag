@@ -42,6 +42,8 @@ in Data {
 	vec2 tex_coord;
 } DataIn;
 
+in float fogFactor;
+
 void main() {
 
 	vec4 spec = vec4(0.0);
@@ -58,6 +60,8 @@ void main() {
 	vec3 l = vec3(0.0);
 
 	float strength = 1.0f; //default strength for directional light
+
+	vec4 fogColor = vec4(0.5f, 0.5f, 0.5f, 1.0f);
 
 	for(int light = 0; light < numLights; light++){
 		if(!Lights[light].isEnabled)
@@ -103,8 +107,10 @@ void main() {
 		texel1 = texture(texmap1, DataIn.tex_coord);
 		//texel2 = texture(texmap2, DataIn.tex_coord);
 
-		//colorOut = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
-		colorOut = max(scatteredLight * texel1 + reflectedLight, 0.01*texel1);
+		//vec4 preFogColor = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
+		vec4 preFogColor = max(scatteredLight * texel1 + reflectedLight, 0.01*texel1);
+		colorOut = mix(fogColor, preFogColor, fogFactor);
+
 	}
 	else if(texMode == 2){
 		texel2 = texture(texmap2, DataIn.tex_coord);
@@ -119,7 +125,9 @@ void main() {
 
 	vec4 rgb = min(scatteredLight + reflectedLight, vec4(1.0));
 
-	colorOut = max(rgb, mat.ambient);
+	vec4 preFogColor = max(rgb, mat.ambient);
+
+	colorOut = mix(fogColor, preFogColor, fogFactor);
 	}
 
 }
