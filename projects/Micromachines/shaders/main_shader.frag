@@ -121,6 +121,23 @@ void main() {
         else
            colorOut = texel2;
 	}
+	else if(texMode == 3){
+		texel1 = texture(texmap1, DataIn.tex_coord);
+
+		float billX = (DataIn.tex_coord.x - 0.5f) * (DataIn.tex_coord.x - 0.5f);
+		float billY = (DataIn.tex_coord.y - 0.5f) * (DataIn.tex_coord.t - 0.5f);
+
+		float distance = sqrt(billX + billY);
+
+		if (distance < 0.45){
+			vec4 preFogColor = max(scatteredLight * texel1 + reflectedLight, texel1);
+			preFogColor = mix(fogColor, preFogColor, fogFactor);
+			colorOut = max(texel1, preFogColor);
+			//colorOut = preFogColor; //For full fog effect
+		}
+		else
+			discard;
+	}
 	else {
 
 	vec4 rgb = min(scatteredLight + reflectedLight, vec4(1.0));

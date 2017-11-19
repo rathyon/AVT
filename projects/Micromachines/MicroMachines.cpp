@@ -57,7 +57,8 @@ GLuint pid;
 // orange = 3
 // particle = 4
 // flare element = 5
-const int objCount = 6;
+// billboard = 6
+const int objCount = 7;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -158,6 +159,10 @@ float orangeSpeed[NUMBER_ORANGES];
 float orangeAcceleration[NUMBER_ORANGES];
 float orangeDim[2] = { 2.0f, 2.0f };
 
+//------------------[ BILLBOARD ]------------------//
+
+float billboardAngle = alpha;
+
 //------------------[ LIGHTS ]------------------//
 
 float dirLight[4] = { 0.5f, 1.0f, 0.0f, 0.0f };
@@ -219,7 +224,7 @@ GLint tex_1_loc;
 GLint tex_2_loc;
 
 //GLint tex_2_loc;
-GLuint TextureArray[4];
+GLuint TextureArray[5];
 
 //------------------[ AUXILIARY FUNCS ]------------------//
 
@@ -912,6 +917,11 @@ void animateOranges() {
 
 }
 
+void animateBillboard() {
+	if (tracking != 1)
+		billboardAngle = alpha;
+}
+
 void sendLights() {
 
 	GLint loc;
@@ -1237,6 +1247,7 @@ void renderScene(void) {
 		animateCar();
 		animateOranges();
 		animateCheerios();
+		animateBillboard();
 	}
 
 	updateScore();
@@ -1322,6 +1333,21 @@ void renderScene(void) {
 	glEnable(GL_CULL_FACE);
 
 	/**/
+
+	// Billboard
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
+	glUniform1i(tex_1_loc, 0);
+
+	objID = 6;
+	translate(MODEL, 0.0f, 25.0f, 0.0f);
+	scale(MODEL, 7.5f, 7.5f, 7.5f);
+	rotate(MODEL, billboardAngle, 0.0f, 1.0f, 0.0f);
+
+	glUniform1i(texMode_UID, 3);
+	render();
+	glUniform1i(texMode_UID, 0);
+
 
 	pushMatrix(MODEL);
 
@@ -1451,6 +1477,8 @@ void processMouseMotion(int xx, int yy)
 		alphaAux = alpha + deltaX;
 		betaAux = beta + deltaY;
 
+		billboardAngle = alphaAux;
+
 		if (betaAux > 85.0f)
 			betaAux = 85.0f;
 		else if (betaAux < -85.0f)
@@ -1574,7 +1602,7 @@ void init()
 	TGA_Texture(TextureArray, "textures/hexagon.tga", 1);
 	TGA_Texture(TextureArray, "textures/ring.tga", 2);
 	TGA_Texture(TextureArray, "textures/sourcelight.tga", 3);
-
+	TGA_Texture(TextureArray, "textures/billboard.tga", 4);
 
 	//Model init
 
@@ -1646,6 +1674,12 @@ void init()
 	loadMaterials(ambFlare, diffFlare, specFlare, null, shininess, texCount);
 	createQuad(2, 2);
 
+	// BillBoard
+	objID = 6;
+
+	loadMaterials(ambTable, diffTable, specTable, null, shininess, texCount);
+	createQuad(1, 1);
+
 	/*----------------- ASSIMP -------------------*/
 
 	/**/
@@ -1686,7 +1720,7 @@ void init()
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
 }
 
