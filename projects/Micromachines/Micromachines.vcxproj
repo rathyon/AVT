@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClCompile Include="AVTmathLib.cpp" />
     <ClCompile Include="basic_geometry.cpp" />
+    <ClCompile Include="l3dBillboard.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MicroMachines.cpp" />
     <ClCompile Include="TGA.cpp" />
@@ -142,6 +143,8 @@
     <ClInclude Include="AVTmathLib.h" />
     <ClInclude Include="basic_geometry.h" />
     <ClInclude Include="cube.h" />
+    <ClInclude Include="l3DBillboard.h" />
+    <ClInclude Include="maths.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="TGA.h" />
     <ClInclude Include="VertexAttrDef.h" />

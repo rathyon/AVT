@@ -61,7 +61,7 @@ void main() {
 
 	float strength = 1.0f; //default strength for directional light
 
-	vec4 fogColor = vec4(0.5f, 0.5f, 0.5f, 1.0f);
+	vec4 fogColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	for(int light = 0; light < numLights; light++){
 		if(!Lights[light].isEnabled)
@@ -109,6 +109,7 @@ void main() {
 
 		//vec4 preFogColor = max(strength * texel1 + reflectedLight, 0.01*texel1*texel2);
 		vec4 preFogColor = max(scatteredLight * texel1 + reflectedLight, (0.01*texel1));
+		preFogColor.a = 1.0f;
 		colorOut = mix(fogColor, preFogColor, fogFactor);
 
 	}

@@ -32,6 +32,7 @@
 #include "VertexAttrDef.h"
 #include "basic_geometry.h"
 #include "TGA.h"
+#include "l3DBillboard.h"
 
 #define PI   3.14159265358979323846f
 
@@ -182,7 +183,7 @@ float spotLightDir_2[3] = { 1.0f, 0.5f, -1.0f };
 float spotLightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 float spotCosCutoff = 0.97f;
 float spotExponent = 0.01f;
-float linearAttenuation = 0.03f;
+float linearAttenuation = 0.01f;
 
 bool candlesOn = true;
 float candlePos[6][4] = {
@@ -560,6 +561,8 @@ void animateCar() {
 			rotate(spotLightDir_2, carAngularSpeed, axisY);
 			carAngle += carAngularSpeed;
 			alpha += carAngularSpeed;
+			carAngle = fmod(carAngle, 360.0f);
+			alpha = fmod(alpha, 360.0f);
 			if (tracking != 1)
 				updateCamera();
 		}
@@ -570,6 +573,8 @@ void animateCar() {
 			rotate(spotLightDir_2, -carAngularSpeed, axisY);
 			carAngle -= carAngularSpeed;
 			alpha -= carAngularSpeed;
+			carAngle = fmod(carAngle, 360.0f);
+			alpha = fmod(alpha, 360.0f);
 			if (tracking != 1)
 				updateCamera();
 		}
@@ -826,28 +831,18 @@ void renderMesh() {
 void selectTextureForFlare(int i) {
 	switch (i) {
 	case 0:
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
 		glUniform1i(tex_2_loc, 1);
 		break;
 	case 1:
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
 		glUniform1i(tex_2_loc, 2);
 		break;
 	case 2:
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, TextureArray[3]);
 		glUniform1i(tex_2_loc, 3);
 		break;
 	case 3:
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
 		glUniform1i(tex_2_loc, 2);
 		break;
 	case 4:
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
 		glUniform1i(tex_2_loc, 1);
 		break;
 	}
@@ -918,6 +913,25 @@ void renderLensFlare() {
 
 }
 
+void renderBillboard() {
+	/** / // Billboard without cheating
+	float pos[3] = { 0.0f, 25.0f, 0.0f };
+	float cam[3] = { camX, camY, camZ };
+	l3dBillboardCylindricalBegin(cam, pos);
+	/**/
+	computeDerivedMatrix(VIEW_MODEL);
+	BillboardCheatCylindricalBegin();
+	computeDerivedMatrix_PVM();
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+	glBindVertexArray(mesh[objID].vao);
+	glDrawElements(mesh[objID].type, mesh[objID].numIndexes, GL_UNSIGNED_INT, 0);
+	loadIdentity(MODEL);
+	/**/
+}
+
 void displayLives(int w, int h) {
 	float x, z, ratio;
 	ratio = (float)w / h;
@@ -941,9 +955,11 @@ void displayLives(int w, int h) {
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INVERT);
 		glStencilMask(0xFF);
-		objID = 1;
+		meshID = 3;
 		translate(MODEL, livesPos[i][0], livesPos[i][1], livesPos[i][2]);
-		render();
+		scale(MODEL, 0.01f, 0.01f, 0.01f);
+		rotate(MODEL, 180.0f, 0,1,0);
+		renderMesh();
 	}
 
 	popMatrix(PROJECTION);
@@ -982,9 +998,21 @@ void renderScene(void) {
 
 	// TEXTURES
 
+	// Grid Texture
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
-	glUniform1i(tex_1_loc, 0);
+	// Flare Hex
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
+	// Flare Ring
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
+	// Flare Source (?)
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[3]);
+	// Sauron Eye
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
 
 
 	pushMatrix(MODEL);
@@ -994,6 +1022,8 @@ void renderScene(void) {
 		animateOranges();
 		animateCheerios();
 		animateBillboard();
+		lamp_spin += 0.2f;
+		lamp_spin = fmod(lamp_spin, 360.0f);
 	}
 
 	updateScore();
@@ -1007,39 +1037,45 @@ void renderScene(void) {
 	translate(MODEL, 0.0f, -50.0f, 0.0f);
 	scale(MODEL, 100.0f, 100.0f, 100.0f);
 	translate(MODEL, -0.5f, -0.5f, -0.5f);
+	glUniform1i(tex_1_loc, 0);
 	glUniform1i(texMode_UID, 1);
 	render();
 	glUniform1i(texMode_UID, 0);
 
-	// TestCube
-	objID = 1;
-	translate(MODEL, carPos[0], carPos[1], carPos[2]);
-	rotate(MODEL, carAngle, 0.0f, 1.0f, 0.0f);
-	translate(MODEL, -0.5f, 0.0f, -0.5f);
-	render();
+	// Car
+	meshID = 2;
+	translate(MODEL, carPos[0], carPos[1] + 0.5f, carPos[2]);
+	rotate(MODEL, carAngle - 90.0f, 0.0f, 1.0f, 0.0f);
+	scale(MODEL, 0.02f, 0.02f, 0.02f);
+	renderMesh();
 
 	// Cheerios
-	objID = 2;
+	meshID = 4;
 	for (int i = 0; i < NUMBER_CHEERIOS; i++) {
 		translate(MODEL, cheerioPos[i][0], cheerioPos[i][1], cheerioPos[i][2]);
-		render();
+		renderMesh();
 	}
 
 	collisionWithOranges();
 
 	// Oranges
-	objID = 3;
+	meshID = 5;
 	for (int i = 0; i < NUMBER_ORANGES; i++) {
 		translate(MODEL, orangePos[i][0], orangePos[i][1], orangePos[i][2]);
-		render();
+		renderMesh();
 	}
 
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glUniform1i(tex_1_loc, 4);
+	glUniform1i(texMode_UID, 2);
+	// Particles
 	if (drawParticles) {
-		objID = 4;
+		objID = 5;
 		for (int i = 0; i < MAX_PARTICLES; i++) {
 			if (particleLife[i] > 0.0f) {
-				translate(MODEL, particlePos[i][0], particlePos[i][1], particlePos[i][2]);
-				render();
+				translate(MODEL, particlePos[i][0], particlePos[i][1] +3, particlePos[i][2]);
+				renderBillboard();
 			}
 
 			else deadParticles++;
@@ -1050,8 +1086,12 @@ void renderScene(void) {
 			deadParticles = 0;
 		}
 	}
+	glUniform1i(texMode_UID, 0);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 
-	// Billboard
+	//Old Billboard
+	/** /
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
 	glUniform1i(tex_1_loc, 0);
@@ -1064,20 +1104,34 @@ void renderScene(void) {
 	glUniform1i(texMode_UID, 3);
 	render();
 	glUniform1i(texMode_UID, 0);
+	/**/
 
+	glUniform1i(tex_1_loc, 4);
 
+	objID = 6;
+	translate(MODEL, 0.0f, 35.0f, 0.0f);
+	glUniform1i(texMode_UID, 3);
+	renderBillboard();
+	glUniform1i(texMode_UID, 0);
+
+	loadIdentity(MODEL);
+
+	// OBJ Rendering
+
+	// Level Scenario
 	meshID = 0;
-	translate(MODEL, 0, 0.25f, 0);
+	translate(MODEL, 0, -0.5f, 0);
 	scale(MODEL, 0.7f, 1, 0.7f);
 	renderMesh();
 
-	/** /
+	// Lamps
 	meshID = 1;
-	translate(MODEL, 0, 10.0f, 0);
-	lamp_spin += 1.0f;
-	lamp_spin = fmod(lamp_spin, 360.0f);
-	rotate(MODEL, lamp_spin, 0,1,0);
-	renderMesh();
+	for (int i = 0; i < 6; i++) {
+		translate(MODEL, candlePos[i][0], candlePos[i][1], candlePos[i][2]);
+		rotate(MODEL, lamp_spin, 0, 1, 0);
+		scale(MODEL, 0.2f, 0.2f, 0.2f);
+		renderMesh();
+	}
 	/**/
 
 	renderLensFlare();
@@ -1410,10 +1464,11 @@ void init()
 	objID = 6;
 
 	loadMaterials(ambTable, diffTable, specTable, null, shininess, texCount);
-	createQuad(1, 1);
+	createQuad(7.5f, 7.5f);
 
 	/*----------------- OBJ LOADING -------------------*/
 
+	// Leven Scenario
 	meshID = 0;
 	Mesh level = Mesh("models/level.obj");
 	objMesh.push_back(level);
@@ -1424,16 +1479,48 @@ void init()
 
 	loadObjMaterials(ambLevel, diffLevel, specLevel, null, shininess, texCount);
 
+	// Rotating Lamp
 	meshID = 1;
 	Mesh lamp = Mesh("models/cube_lamp.obj");
 	objMesh.push_back(lamp);
 
-	float ambLamp[4] = { 0.0f, 0.0f, 0.01f, 0.5f };
-	float diffLamp[4] = { 0.0f, 0.0f, 0.5f, 0.5f };
-	float specLamp[4] = { 1.0f, 1.0f, 1.0f, 0.5f };
+	float ambLamp[4] = { 0.0f, 0.0f, 0.01f, 0.2f };
+	float diffLamp[4] = { 0.0f, 0.0f, 0.5f, 0.2f };
+	float specLamp[4] = { 1.0f, 1.0f, 1.0f, 0.2f };
 
 	loadObjMaterials(ambLamp, diffLamp, specLamp, null, shininess, texCount);
 
+	// Car
+	meshID = 2;
+	Mesh car = Mesh("models/car.obj");
+	objMesh.push_back(car);
+
+	loadObjMaterials(ambTestCube, diffTestCube, specTestCube, null, shininess, texCount);
+
+	// Life
+	meshID = 3;
+	Mesh life = Mesh("models/car.obj");
+	objMesh.push_back(life);
+
+	float ambLife[4] = { 0.7f, 0.0f, 0.0f, 1.0f };
+	float diffLife[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float specLife[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	loadObjMaterials(ambLife, diffLife, specLife, null, shininess, texCount);
+
+	// Obstacle aka cheerio
+	meshID = 4;
+	Mesh obstacle = Mesh("models/obstacle.obj");
+	objMesh.push_back(obstacle);
+
+	loadObjMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
+
+	//Spiked ball aka orange
+	meshID = 5;
+	Mesh ball = Mesh("models/spiked_ball.obj");
+	objMesh.push_back(ball);
+
+	loadObjMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
 	
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
@@ -1442,7 +1529,7 @@ void init()
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
 }
 
