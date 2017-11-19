@@ -23,11 +23,8 @@
 // GLUT is the toolkit to interface with the OS
 #include <GL/freeglut.h>
 
-// assimp include files. These three are usually needed.
-#pragma comment(lib, "assimp.lib") 
-#include "Importer.hpp"	//OO version Header!
-#include "PostProcess.h"
-#include "Scene.h"
+// Model loading lib
+#include "Mesh.h"
 
 // Use Very Simple Libs
 #include "VSShaderlib.h"
@@ -62,6 +59,12 @@ const int objCount = 7;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
+
+// level = 0
+int meshID = 0;
+std::vector<Mesh> objMesh;
+
+float lamp_spin = 0.0f;
 
 
 //External array storage defined in AVTmathLib.cpp
@@ -234,286 +237,6 @@ float RNG() {
 	return RNG;
 }
 
-//--------------------------------------[ ASSIMP ]--------------------------------------//
-
-#define aisgl_min(x,y) (x<y?x:y)
-#define aisgl_max(x,y) (y>x?y:x)
-
-const aiScene* scene_1 = NULL;
-const aiScene* scene_2 = NULL;
-float scene_1_sf;
-float scene_2_sf;
-
-struct Mesh {
-
-	GLuint vao;
-	GLuint texIndex;
-	struct Material mat;
-	int numFaces;
-};
-
-Assimp::Importer importer;
-
-float scaleFactor; // scale factor for the scene;
-
-std::vector<struct Mesh> meshes; // for storing imported .OBJ files
-
-
-void set_float4(float f[4], float a, float b, float c, float d){
-	f[0] = a;
-	f[1] = b;
-	f[2] = c;
-	f[3] = d;
-}
-void color4_to_float4(const aiColor4D *c, float f[4]){
-	f[0] = c->r;
-	f[1] = c->g;
-	f[2] = c->b;
-	f[3] = c->a;
-}
-void get_bounding_box_for_node(const aiNode* nd, aiVector3D* min, aiVector3D* max, const aiScene* scene) {
-	aiMatrix4x4 prev;
-	unsigned int n = 0, t;
-
-	for (; n < nd->mNumMeshes; ++n) {
-		const aiMesh* mesh = scene->mMeshes[nd->mMeshes[n]];
-		for (t = 0; t < mesh->mNumVertices; ++t) {
-
-			aiVector3D tmp = mesh->mVertices[t];
-
-			min->x = aisgl_min(min->x, tmp.x);
-			min->y = aisgl_min(min->y, tmp.y);
-			min->z = aisgl_min(min->z, tmp.z);
-
-			max->x = aisgl_max(max->x, tmp.x);
-			max->y = aisgl_max(max->y, tmp.y);
-			max->z = aisgl_max(max->z, tmp.z);
-		}
-	}
-
-	for (n = 0; n < nd->mNumChildren; ++n) {
-		get_bounding_box_for_node(nd->mChildren[n], min, max, scene);
-	}
-}
-void get_bounding_box(aiVector3D* min, aiVector3D* max, const aiScene* scene) {
-
-	min->x = min->y = min->z = 1e10f;
-	max->x = max->y = max->z = -1e10f;
-	get_bounding_box_for_node(scene->mRootNode, min, max, scene);
-}
-bool Import3DFromFile(const std::string& pFile, const aiScene** scene)
-{
-
-	//check if file exists
-	std::ifstream fin(pFile.c_str());
-	if (!fin.fail()) {
-		fin.close();
-	}
-	else {
-		printf("Couldn't open file: %s\n", pFile.c_str());
-		printf("%s\n", importer.GetErrorString());
-		return false;
-	}
-
-	*scene = importer.ReadFile(pFile, aiProcessPreset_TargetRealtime_Quality);
-
-	// If the import failed, report it
-	if (!scene)
-	{
-		printf("%s\n", importer.GetErrorString());
-		return false;
-	}
-
-	// Now we can access the file's contents.
-	printf("Import of scene %s succeeded.", pFile.c_str());
-
-	aiVector3D scene_min, scene_max, scene_center;
-	get_bounding_box(&scene_min, &scene_max, *scene);
-	float tmp;
-	tmp = scene_max.x - scene_min.x;
-	tmp = scene_max.y - scene_min.y > tmp ? scene_max.y - scene_min.y : tmp;
-	tmp = scene_max.z - scene_min.z > tmp ? scene_max.z - scene_min.z : tmp;
-	scaleFactor = 1.f / tmp;
-
-	// We're done. Everything will be cleaned up by the importer destructor
-	return true;
-}
-void genVAOsAndUniformBuffer(const aiScene *sc) {
-
-	struct Mesh aMesh;
-	struct Material aMat;
-	GLuint buffer;
-
-	// For each mesh
-	for (unsigned int n = 0; n < sc->mNumMeshes; ++n)
-	{
-		const aiMesh* mesh = sc->mMeshes[n];
-
-		// create array with faces
-		// have to convert from Assimp format to array
-		unsigned int *faceArray;
-		faceArray = (unsigned int *)malloc(sizeof(unsigned int) * mesh->mNumFaces * 3);
-		unsigned int faceIndex = 0;
-
-		for (unsigned int t = 0; t < mesh->mNumFaces; ++t) {
-			const aiFace* face = &mesh->mFaces[t];
-
-			memcpy(&faceArray[faceIndex], face->mIndices, 3 * sizeof(unsigned int));
-			faceIndex += 3;
-		}
-		aMesh.numFaces = sc->mMeshes[n]->mNumFaces;
-
-		// generate Vertex Array for mesh
-		glGenVertexArrays(1, &(aMesh.vao));
-		glBindVertexArray(aMesh.vao);
-
-		// buffer for faces
-		glGenBuffers(1, &buffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * mesh->mNumFaces * 3, faceArray, GL_STATIC_DRAW);
-
-		// buffer for vertex positions
-		if (mesh->HasPositions()) {
-			glGenBuffers(1, &buffer);
-			glBindBuffer(GL_ARRAY_BUFFER, buffer);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * mesh->mNumVertices, mesh->mVertices, GL_STATIC_DRAW);
-			glEnableVertexAttribArray(VERTEX_COORD_ATTRIB);
-			glVertexAttribPointer(VERTEX_COORD_ATTRIB, 3, GL_FLOAT, 0, 0, 0);
-		}
-
-		// buffer for vertex normals
-		if (mesh->HasNormals()) {
-			glGenBuffers(1, &buffer);
-			glBindBuffer(GL_ARRAY_BUFFER, buffer);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * mesh->mNumVertices, mesh->mNormals, GL_STATIC_DRAW);
-			glEnableVertexAttribArray(NORMAL_ATTRIB);
-			glVertexAttribPointer(NORMAL_ATTRIB, 3, GL_FLOAT, 0, 0, 0);
-		}
-
-		// buffer for vertex texture coordinates
-		if (mesh->HasTextureCoords(0)) {
-			float *texCoords = (float *)malloc(sizeof(float) * 2 * mesh->mNumVertices);
-			for (unsigned int k = 0; k < mesh->mNumVertices; ++k) {
-
-				texCoords[k * 2] = mesh->mTextureCoords[0][k].x;
-				texCoords[k * 2 + 1] = mesh->mTextureCoords[0][k].y;
-
-			}
-			glGenBuffers(1, &buffer);
-			glBindBuffer(GL_ARRAY_BUFFER, buffer);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * mesh->mNumVertices, texCoords, GL_STATIC_DRAW);
-			glEnableVertexAttribArray(TEXTURE_COORD_ATTRIB);
-			glVertexAttribPointer(TEXTURE_COORD_ATTRIB, 2, GL_FLOAT, 0, 0, 0);
-		}
-
-		// unbind buffers
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-		// create material uniform buffer
-		aiMaterial *mtl = sc->mMaterials[mesh->mMaterialIndex];
-		aMat.texCount = 0;
-
-		float c[4];
-		set_float4(c, 0.8f, 0.8f, 0.8f, 1.0f);
-		aiColor4D diffuse;
-		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse))
-			color4_to_float4(&diffuse, c);
-		memcpy(aMat.diffuse, c, sizeof(c));
-
-		set_float4(c, 0.2f, 0.2f, 0.2f, 1.0f);
-		aiColor4D ambient;
-		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_AMBIENT, &ambient))
-			color4_to_float4(&ambient, c);
-		memcpy(aMat.ambient, c, sizeof(c));
-
-		set_float4(c, 0.0f, 0.0f, 0.0f, 1.0f);
-		aiColor4D specular;
-		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_SPECULAR, &specular))
-			color4_to_float4(&specular, c);
-		memcpy(aMat.specular, c, sizeof(c));
-
-		set_float4(c, 0.0f, 0.0f, 0.0f, 1.0f);
-		aiColor4D emission;
-		if (AI_SUCCESS == aiGetMaterialColor(mtl, AI_MATKEY_COLOR_EMISSIVE, &emission))
-			color4_to_float4(&emission, c);
-		memcpy(aMat.emissive, c, sizeof(c));
-
-		float shininess = 0.0;
-		unsigned int max;
-		aiGetMaterialFloatArray(mtl, AI_MATKEY_SHININESS, &shininess, &max);
-		aMat.shininess = shininess;
-
-		memcpy(aMesh.mat.diffuse, aMat.diffuse, sizeof(aMat.diffuse));
-		memcpy(aMesh.mat.ambient, aMat.ambient, sizeof(aMat.ambient));
-		memcpy(aMesh.mat.specular, aMat.specular, sizeof(aMat.specular));
-		memcpy(aMesh.mat.emissive, aMat.emissive, sizeof(aMat.emissive));
-		aMesh.mat.shininess = aMat.shininess;
-
-		meshes.push_back(aMesh);
-	}
-}
-
-// Render Assimp Model
-
-void renderModel(int model_ID, const aiScene *sc, const aiNode* nd)
-{
-
-	// Get node transformation matrix
-	aiMatrix4x4 m = nd->mTransformation;
-	// OpenGL matrices are column major
-	m.Transpose();
-
-	// save model matrix and apply node transformation
-	pushMatrix(MODEL);
-
-	float aux[16];
-	memcpy(aux, &m, sizeof(float) * 16);
-	multMatrix(mMatrix[MODEL], aux);
-
-	//send matrices
-	computeDerivedMatrix(PROJ_VIEW_MODEL);
-	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-	computeNormalMatrix3x3();
-	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-
-	// draw all meshes assigned to this node
-	for (unsigned int n = 0; n < nd->mNumMeshes; ++n) {
-
-		GLint loc;
-
-		// send materials
-		loc = glGetUniformLocation(pid, "mat.ambient");
-		glUniform4fv(loc, 1, meshes[model_ID].mat.ambient);
-		loc = glGetUniformLocation(pid, "mat.diffuse");
-		glUniform4fv(loc, 1, meshes[model_ID].mat.diffuse);
-		loc = glGetUniformLocation(pid, "mat.specular");
-		glUniform4fv(loc, 1, meshes[model_ID].mat.specular);
-		loc = glGetUniformLocation(pid, "mat.shininess");
-		glUniform1f(loc, meshes[model_ID].mat.shininess);
-
-		// bind texture
-		//glBindTexture(GL_TEXTURE_2D, meshes[nd->mMeshes[n]].texIndex);
-		// bind VAO
-		glBindVertexArray(meshes[nd->mMeshes[n]].vao);
-		// draw
-		glDrawElements(GL_TRIANGLES, meshes[nd->mMeshes[n]].numFaces * 3, GL_UNSIGNED_INT, 0);
-
-	}
-
-	// draw all children
-	for (unsigned int n = 0; n < nd->mNumChildren; ++n) {
-		renderModel(0, sc, nd->mChildren[n]);
-	}
-	popMatrix(MODEL);
-}
-
-//--------------------------------------------------------------------------------------//
-//------------------------------------[ ASSIMP END ]------------------------------------//
-//--------------------------------------------------------------------------------------//
 
 void timer(int value)
 {
@@ -1077,6 +800,29 @@ void render() {
 
 }
 
+void renderMesh() {
+
+	// send materials
+	glUniform4fv(glGetUniformLocation(pid, "mat.ambient"), 1, objMesh[meshID].mat.ambient);
+	glUniform4fv(glGetUniformLocation(pid, "mat.diffuse"), 1, objMesh[meshID].mat.diffuse);
+	glUniform4fv(glGetUniformLocation(pid, "mat.specular"), 1, objMesh[meshID].mat.specular);
+	glUniform1f(glGetUniformLocation(pid, "mat.shininess"), objMesh[meshID].mat.shininess);
+
+	//send matrices
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	//draw
+	glBindVertexArray(objMesh[meshID].getVAO());
+	glDrawArrays(GL_TRIANGLES, 0, objMesh[meshID].getVertexCount());
+	glBindVertexArray(0);
+
+	loadIdentity(MODEL); //reset model matrix
+}
+
 void selectTextureForFlare(int i) {
 	switch (i) {
 	case 0:
@@ -1107,7 +853,7 @@ void selectTextureForFlare(int i) {
 	}
 }
 
-void newFlare() {
+void renderLensFlare() {
 	float cx, cy; //center of window
 	float lx, ly; //relative pos of "source light"
 	GLint loc;
@@ -1305,35 +1051,6 @@ void renderScene(void) {
 		}
 	}
 
-	// Lens Flare Objects
-	/** /
-	renderFlare();
-	for (int i = 5; i < 9; i++) {
-		objID = i;
-		translate(MODEL, lensElementsPos[i - 5][0], lensElementsPos[i - 5][1], lensElementsPos[i - 5][2]);
-		render();
-	}
-
-	pushMatrix(PROJECTION);
-	pushMatrix(VIEW);
-	loadIdentity(PROJECTION);
-	loadIdentity(VIEW);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	ortho(0, WinX, 0, WinY, -1, 1);
-
-	objID = 1;
-	translate(MODEL, WinX / 2, WinY / 2, 0);
-	scale(MODEL, 50, 50, 0);
-	render();
-
-	popMatrix(PROJECTION);
-	popMatrix(VIEW);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-
-	/**/
-
 	// Billboard
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
@@ -1349,15 +1066,21 @@ void renderScene(void) {
 	glUniform1i(texMode_UID, 0);
 
 
-	pushMatrix(MODEL);
+	meshID = 0;
+	translate(MODEL, 0, 0.25f, 0);
+	scale(MODEL, 0.7f, 1, 0.7f);
+	renderMesh();
 
-	translate(MODEL, 0.0f, -0.003f, 0.0f);
-	scale(MODEL, scene_1_sf*130.0f, scene_1_sf*130.0f, scene_1_sf*130.0f);
-	renderModel(0, scene_1, scene_1->mRootNode);
+	/** /
+	meshID = 1;
+	translate(MODEL, 0, 10.0f, 0);
+	lamp_spin += 1.0f;
+	lamp_spin = fmod(lamp_spin, 360.0f);
+	rotate(MODEL, lamp_spin, 0,1,0);
+	renderMesh();
+	/**/
 
-	popMatrix(MODEL);
-
-	newFlare();
+	renderLensFlare();
 
 	popMatrix(MODEL);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1593,6 +1316,15 @@ void loadMaterials(float* ambient, float* diffuse, float* specular, float* emiss
 	mesh[objID].mat.texCount = texCount;
 }
 
+void loadObjMaterials(float* ambient, float* diffuse, float* specular, float* emissive, float shininess, int texCount) {
+	memcpy(objMesh[meshID].mat.ambient, ambient, 4 * sizeof(float));
+	memcpy(objMesh[meshID].mat.diffuse, diffuse, 4 * sizeof(float));
+	memcpy(objMesh[meshID].mat.specular, specular, 4 * sizeof(float));
+	memcpy(objMesh[meshID].mat.emissive, emissive, 4 * sizeof(float));
+	objMesh[meshID].mat.shininess = shininess;
+	objMesh[meshID].mat.texCount = texCount;
+}
+
 void init()
 {
 	updateCamera();
@@ -1680,38 +1412,28 @@ void init()
 	loadMaterials(ambTable, diffTable, specTable, null, shininess, texCount);
 	createQuad(1, 1);
 
-	/*----------------- ASSIMP -------------------*/
+	/*----------------- OBJ LOADING -------------------*/
 
-	/**/
-	if (!Import3DFromFile("models/level.obj", &scene_1))
-		std::cout << "ERROR LOADING LEVEL OBJ" << std::endl;
-
-	scene_1_sf = scaleFactor;
-	genVAOsAndUniformBuffer(scene_1);
+	meshID = 0;
+	Mesh level = Mesh("models/level.obj");
+	objMesh.push_back(level);
 
 	float ambLevel[4] = { 0.01f, 0.01f, 0.01f, 0.5f };
 	float diffLevel[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
 	float specLevel[4] = { 1.0f, 1.0f, 1.0f, 0.5f };
 
-	memcpy(meshes[0].mat.ambient, ambLevel, sizeof(ambLevel));
-	memcpy(meshes[0].mat.diffuse, diffLevel, sizeof(diffLevel));
-	memcpy(meshes[0].mat.specular, specLevel, sizeof(specLevel));
+	loadObjMaterials(ambLevel, diffLevel, specLevel, null, shininess, texCount);
 
-	/** /
-	if (!Import3DFromFile("models/cube_lamp.obj", &scene_2))
-		std::cout << "ERROR LOADING LAMP OBJ" << std::endl;
+	meshID = 1;
+	Mesh lamp = Mesh("models/cube_lamp.obj");
+	objMesh.push_back(lamp);
 
-	scene_2_sf = scaleFactor;
-	genVAOsAndUniformBuffer(scene_2);
+	float ambLamp[4] = { 0.0f, 0.0f, 0.01f, 0.5f };
+	float diffLamp[4] = { 0.0f, 0.0f, 0.5f, 0.5f };
+	float specLamp[4] = { 1.0f, 1.0f, 1.0f, 0.5f };
 
-	float ambLamp[4] = { 0.0f, 0.0f, 0.1f, 1.0f };
-	float diffLamp[4] = { 0.0f, 0.2f, 0.7f, 1.0f };
-	float specLamp[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+	loadObjMaterials(ambLamp, diffLamp, specLamp, null, shininess, texCount);
 
-	memcpy(meshes[0].mat.ambient, ambLamp, sizeof(ambLamp));
-	memcpy(meshes[0].mat.diffuse, diffLamp, sizeof(diffLamp));
-	memcpy(meshes[0].mat.specular, specLamp, sizeof(specLamp));
-	/**/
 	
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
