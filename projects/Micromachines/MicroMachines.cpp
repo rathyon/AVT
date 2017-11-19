@@ -81,7 +81,9 @@ GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
 
+float axisX[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
 float axisY[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+float axisZ[4] = { 0.0f, 0.0f, 1.0f, 0.0f };
 	
 //------------------[ CAMERAS ]------------------//
 
@@ -160,6 +162,8 @@ float cheerioDim[2] = { 1.0f, 1.0f };
 
 float orangePos[NUMBER_ORANGES][4];
 float orangeSpeed[NUMBER_ORANGES];
+float orangeRotation[NUMBER_ORANGES];
+float orangeRotationFactor = 6.0f;
 float orangeAcceleration[NUMBER_ORANGES];
 float orangeDim[2] = { 2.0f, 2.0f };
 
@@ -639,6 +643,7 @@ void animateOranges() {
 		else { // normal movement
 			orangeSpeed[i] += orangeAcceleration[i];
 			orangePos[i][0] += orangeSpeed[i];
+			orangeRotation[i] += orangeRotationFactor * orangeSpeed[i];
 		}
 
 	}
@@ -1045,7 +1050,7 @@ void renderScene(void) {
 	// Car
 	meshID = 2;
 	translate(MODEL, carPos[0], carPos[1] + 0.5f, carPos[2]);
-	rotate(MODEL, carAngle - 90.0f, 0.0f, 1.0f, 0.0f);
+	rotate(MODEL, carAngle - 90.0f, axisY[0], axisY[1], axisY[2]);
 	scale(MODEL, 0.02f, 0.02f, 0.02f);
 	renderMesh();
 
@@ -1062,6 +1067,7 @@ void renderScene(void) {
 	meshID = 5;
 	for (int i = 0; i < NUMBER_ORANGES; i++) {
 		translate(MODEL, orangePos[i][0], orangePos[i][1], orangePos[i][2]);
+		rotate(MODEL, orangeRotation[i], axisZ[0], axisZ[1], -axisZ[2]);
 		renderMesh();
 	}
 
@@ -1128,7 +1134,7 @@ void renderScene(void) {
 	meshID = 1;
 	for (int i = 0; i < 6; i++) {
 		translate(MODEL, candlePos[i][0], candlePos[i][1], candlePos[i][2]);
-		rotate(MODEL, lamp_spin, 0, 1, 0);
+		rotate(MODEL, lamp_spin, axisY[0], axisY[1], axisY[2]);
 		scale(MODEL, 0.2f, 0.2f, 0.2f);
 		renderMesh();
 	}
