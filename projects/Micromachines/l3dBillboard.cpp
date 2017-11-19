@@ -89,7 +89,7 @@ void l3dBillboardCylindricalBegin(float *cam, float *worldPos) {
 // if the lookAt and v vectors are too close together then |aux| could
 // be bigger than 1 due to lack of precision
 	if ((angleCosine < 0.99990) && (angleCosine > -0.9999))
-		rotate(MODEL,acos(angleCosine)*180/3.14,upAux[0], upAux[1], upAux[2]);
+		rotate(MODEL,acos(angleCosine)*180.0f/3.14f,upAux[0], upAux[1], upAux[2]);
 }
 
 
@@ -127,7 +127,7 @@ void l3dBillboardSphericalBegin(float *cam, float *worldPos) {
 // if the lookAt and v vectors are too close together then |aux| could
 // be bigger than 1 due to lack of precision
 	if ((angleCosine < 0.99990) && (angleCosine > -0.9999))
-		rotate(MODEL,acos(angleCosine)*180/3.14,upAux[0], upAux[1], upAux[2]);
+		rotate(MODEL,acos(angleCosine)*180.0f/3.14f,upAux[0], upAux[1], upAux[2]);
 
 
 // The second part tilts the object so that it faces the camera
@@ -149,9 +149,9 @@ void l3dBillboardSphericalBegin(float *cam, float *worldPos) {
 // angle between them
 	if ((angleCosine < 0.99990) && (angleCosine > -0.9999))
 		if (objToCam[1] < 0)
-			rotate(MODEL,acos(angleCosine)*180/3.14,1,0,0);
+			rotate(MODEL,acos(angleCosine)*180.0f/3.14f,1,0,0);
 		else
-			rotate(MODEL,acos(angleCosine)*180/3.14,-1,0,0);
+			rotate(MODEL,acos(angleCosine)*180.0f/3.14f,-1,0,0);
 
 }
 

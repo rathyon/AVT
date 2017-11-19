@@ -111,6 +111,7 @@ float const carInitDir[3] = { 0.0f, 0.0f, -1.0f };
 float carDir[3] = { 0.0f, 0.0f, -1.0f };
 
 float carSpeed = 0.0f;
+float carWheelRotation = 0.0f;
 float carAcc = 0.002f;
 float carTraction = 0.001f;
 float carBrake = 0.005f;
@@ -119,6 +120,11 @@ float carAngularSpeed = 1.5f;
 float carAngle = 0.0f;
 float speedLimit = 0.3f;
 
+int wheelTurn = 0;
+float carWheelRBPos[3] = { 0.9f, 0.3f, 1.5f };
+float carWheelRFPos[3] = { 0.9f, 0.3f, -1.2f };
+float carWheelLBPos[3] = { -1.0f, 0.3f, 1.5f };
+float carWheelLFPos[3] = { -1.0f, 0.3f, -1.2f };
 
 bool carIsForward = false;
 bool carIsReverse = false;
@@ -519,7 +525,6 @@ void resetGame() {
 	resetCheerios();
 }
 
-
 void animateCar() {
 	float aux[3];
 
@@ -558,8 +563,18 @@ void animateCar() {
 	add(carPos, aux, carPos);
 	add(spotLightPos, aux, spotLightPos);
 
+	if (carIsLeft && !carIsRight) {
+		wheelTurn = 1;
+	}
+	else if (carIsRight && !carIsLeft) {
+		wheelTurn = -1;
+	}
+	else {
+		wheelTurn = 0;
+	}
+
 	if (carSpeed != 0.0f) {
-		if ((carIsLeft && carSpeed > 0.0f) || (carIsRight && carSpeed < 0.0f)) {
+		if ((carIsLeft && !carIsRight && carSpeed > 0.0f) || (carIsRight && !carIsLeft && carSpeed < 0.0f)) {
 			rotate(carDir, carAngularSpeed, axisY);
 			rotate(spotLightDir_1, carAngularSpeed, axisY);
 			rotate(spotLightDir_2, carAngularSpeed, axisY);
@@ -571,7 +586,7 @@ void animateCar() {
 				updateCamera();
 		}
 
-		else if (carIsRight && carSpeed > 0.0f || (carIsLeft && carSpeed < 0.0f)) {
+		else if (carIsRight && !carIsLeft && carSpeed > 0.0f || (carIsLeft && !carIsRight && carSpeed < 0.0f)) {
 			rotate(carDir, -carAngularSpeed, axisY);
 			rotate(spotLightDir_1, -carAngularSpeed, axisY);
 			rotate(spotLightDir_2, -carAngularSpeed, axisY);
@@ -833,6 +848,7 @@ void renderMesh() {
 	loadIdentity(MODEL); //reset model matrix
 }
 
+
 void selectTextureForFlare(int i) {
 	switch (i) {
 	case 0:
@@ -937,6 +953,58 @@ void renderBillboard() {
 	/**/
 }
 
+void renderCarWheels() {
+	carWheelRotation += carSpeed * 15.0f;
+	if (carWheelRotation > 360.0f) {
+		carWheelRotation -= 360.0f;
+	}
+	else if (carWheelRotation < 0.0f) {
+		carWheelRotation += 360.0f;
+	}
+
+	//Right back wheel
+
+	translate(MODEL, carPos[0], carPos[1], carPos[2]);
+	rotate(MODEL, carAngle, axisY[0], axisY[1], axisY[2]);
+	translate(MODEL, carWheelRBPos[0], carWheelRBPos[1], carWheelRBPos[2]);
+	rotate(MODEL, carWheelRotation, -axisX[0], axisX[1], axisX[2]);
+	rotate(MODEL, 90.0f, axisY[0], axisY[1], axisY[2]);
+	scale(MODEL, 0.036f, 0.036f, 0.036f);
+	renderMesh();
+
+	//Left back wheel
+
+	translate(MODEL, carPos[0], carPos[1], carPos[2]);
+	rotate(MODEL, carAngle, axisY[0], axisY[1], axisY[2]);
+	translate(MODEL, carWheelLBPos[0], carWheelLBPos[1], carWheelLBPos[2]);
+	rotate(MODEL, carWheelRotation, -axisX[0], axisX[1], axisX[2]);
+	rotate(MODEL, 90.0f, axisY[0], axisY[1], axisY[2]);
+	scale(MODEL, 0.036f, 0.036f, 0.036f);
+	renderMesh();
+
+	//Right front wheel
+
+	translate(MODEL, carPos[0], carPos[1], carPos[2]);
+	rotate(MODEL, carAngle, axisY[0], axisY[1], axisY[2]);
+	translate(MODEL, carWheelRFPos[0], carWheelRFPos[1], carWheelRFPos[2]);
+	rotate(MODEL, 20.0f*wheelTurn, axisY[0], axisY[1], axisY[2]);
+	rotate(MODEL, carWheelRotation, -axisX[0], axisX[1], axisX[2]);
+	rotate(MODEL, 90.0f, axisY[0], axisY[1], axisY[2]);
+	scale(MODEL, 0.036f, 0.036f, 0.036f);
+	renderMesh();
+
+	//Left front wheel
+
+	translate(MODEL, carPos[0], carPos[1], carPos[2]);
+	rotate(MODEL, carAngle, axisY[0], axisY[1], axisY[2]);
+	translate(MODEL, carWheelLFPos[0], carWheelLFPos[1], carWheelLFPos[2]);
+	rotate(MODEL, 20.0f*wheelTurn, axisY[0], axisY[1], axisY[2]);
+	rotate(MODEL, carWheelRotation, -axisX[0], axisX[1], axisX[2]);
+	rotate(MODEL, 90.0f, axisY[0], axisY[1], axisY[2]);
+	scale(MODEL, 0.036f, 0.036f, 0.036f);
+	renderMesh();
+}
+
 void displayLives(int w, int h) {
 	float x, z, ratio;
 	ratio = (float)w / h;
@@ -1024,7 +1092,7 @@ void renderScene(void) {
 
 	if (!isPaused && !isGameOver) {
 		animateCar();
-		animateOranges();
+		//animateOranges();
 		animateCheerios();
 		animateBillboard();
 		lamp_spin += 0.2f;
@@ -1071,7 +1139,10 @@ void renderScene(void) {
 		renderMesh();
 	}
 
-	glDisable(GL_DEPTH_TEST);
+	// Car wheels
+	meshID = 6;
+	renderCarWheels();
+
 	glDisable(GL_CULL_FACE);
 	glUniform1i(tex_1_loc, 4);
 	glUniform1i(texMode_UID, 2);
@@ -1093,7 +1164,6 @@ void renderScene(void) {
 		}
 	}
 	glUniform1i(texMode_UID, 0);
-	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 
 	//Old Billboard
@@ -1472,6 +1542,7 @@ void init()
 	loadMaterials(ambTable, diffTable, specTable, null, shininess, texCount);
 	createQuad(7.5f, 7.5f);
 
+
 	/*----------------- OBJ LOADING -------------------*/
 
 	// Leven Scenario
@@ -1527,6 +1598,17 @@ void init()
 	objMesh.push_back(ball);
 
 	loadObjMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
+
+	//Car wheel
+	meshID = 6;
+	Mesh wheel = Mesh("models/wheel.obj");
+	objMesh.push_back(wheel);
+
+	float ambWheel[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	float diffWheel[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	float specWheel[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+
+	loadObjMaterials(ambWheel, diffWheel, specWheel, null, shininess, texCount);
 	
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
