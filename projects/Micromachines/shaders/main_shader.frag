@@ -4,6 +4,7 @@ uniform sampler2D texmap1;
 uniform sampler2D texmap2;
 uniform int texMode;
 uniform float lensAlpha;
+uniform float particleAlpha;
 
 out vec4 colorOut;
 
@@ -150,7 +151,10 @@ void main() {
 		texel1 = texture(texmap1, DataIn.tex_coord);
 		if (texel1.a < 0.5)
 			discard;
-		colorOut = texel1;
+		else{
+			texel1.a = particleAlpha;
+			colorOut = texel1;
+		}
 	}
 	else {
 

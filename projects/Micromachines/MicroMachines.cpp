@@ -63,6 +63,12 @@ struct MyMesh mesh[objCount];
 int objID = 0;
 
 // level = 0
+// lamp = 1
+// car = 2
+// life = 3
+// "cheerio" = 4
+// "orange" = 5
+// wheel = 6
 int meshID = 0;
 std::vector<Mesh> objMesh;
 
@@ -176,7 +182,7 @@ float orangeDim[2] = { 2.0f, 2.0f };
 
 //------------------[ BILLBOARD ]------------------//
 
-float billboardAngle = alpha;
+float billboardAngle = alpha; // currently unused
 
 //------------------[ LIGHTS ]------------------//
 
@@ -212,15 +218,16 @@ float candleAttenuation = 0.2f;
 //------------------[ PARTICLES ]------------------//
 
 #define MAX_PARTICLES 250
-#define frand() ((float)rand() / RAND_MAX)
+#define frand() ((float)rand() / RAND_MAX) // random float between 0 and 1
 
 float particlePos[MAX_PARTICLES][3];
 float particleLife[MAX_PARTICLES];
 float particleFade[MAX_PARTICLES];
 float particleSpeed[MAX_PARTICLES][3];
+float particleAlpha[MAX_PARTICLES];
 float particleAcc[3] = { 0.1f, -0.15f, 0.0f };
 
-int drawParticles = 0; // instead of boolean, drawParticles is an indicator of which kind of particle to render. 0 for no particle, 1 for explosion, 2 for confetti.
+int drawParticles = 0; // instead of a boolean, drawParticles is an indicator of which kind of particle to render. 0 for no particle, 1 for explosion, 2 for confetti.
 int deadParticles = 0;
 
 //------------------[ LENS FLARE ]------------------//
@@ -288,9 +295,11 @@ void initParticles()
 
 		particleLife[i] = 1.0f;
 		particleFade[i] = 0.005f;
+		particleAlpha[i] = 1.0f;
 	}
 }
 
+// This function is always being called by OpenGL, as it is a timerFunc
 void iterate(int value)
 {
 	int i;
@@ -312,14 +321,17 @@ void iterate(int value)
 
 			if (particlePos[i][1] < -5.0f) {
 				particleLife[i] = 0.0f;
+				particleAlpha[i] = 0.0f;
 			}
 
-			else
+			else {
 				particleLife[i] -= particleFade[i];
+				particleAlpha[i] -= particleFade[i];
+			}
 		}
 	}
 
-	glutTimerFunc(33, iterate, 0);
+	glutTimerFunc(33, iterate, 0); // reduzir numero para acelerar animação
 
 }
 
@@ -1075,7 +1087,7 @@ void renderScene(void) {
 	}
 
 	else if (camera == TOP) {
-		lookAt(65, 30, 0, 0, 0, 0, 0, 1, 0);
+		lookAt(65, 60, 0, 0, 0, 0, 0, 1, 0);
 	}
 
 	else if (camera == CHASE) {
@@ -1264,10 +1276,9 @@ void renderScene(void) {
 	}
 	/**/
 
+	// I don't think this is needed
 	if (!isPaused && !isGameOver)
 		renderLensFlare();
-
-	// Particles
 
 	// Particles
 	if (drawParticles != 0) {
@@ -1286,6 +1297,7 @@ void renderScene(void) {
 		for (int i = 0; i < MAX_PARTICLES; i++) {
 			if (particleLife[i] > 0.0f) {
 				translate(MODEL, particlePos[i][0], particlePos[i][1] + 3, particlePos[i][2]);
+				glUniform1f(glGetUniformLocation(pid, "particleAlpha"), particleAlpha[i]);
 				renderBillboard();
 			}
 
