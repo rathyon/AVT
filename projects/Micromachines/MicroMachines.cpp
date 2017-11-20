@@ -56,7 +56,8 @@ GLuint pid;
 // particle = 4
 // flare element = 5
 // billboard = 6
-const int objCount = 7;
+// pause and game over screen = 7
+const int objCount = 8;
 
 struct MyMesh mesh[objCount];
 int objID = 0;
@@ -210,17 +211,16 @@ float candleAttenuation = 0.2f;
 
 //------------------[ PARTICLES ]------------------//
 
-#define MAX_PARTICLES 20
+#define MAX_PARTICLES 250
 #define frand() ((float)rand() / RAND_MAX)
 
 float particlePos[MAX_PARTICLES][3];
 float particleLife[MAX_PARTICLES];
 float particleFade[MAX_PARTICLES];
-float particleRGB[3] = { 0.882f, 0.552f, 0.211f };
 float particleSpeed[MAX_PARTICLES][3];
 float particleAcc[3] = { 0.1f, -0.15f, 0.0f };
 
-bool drawParticles = false;
+int drawParticles = 0; // instead of boolean, drawParticles is an indicator of which kind of particle to render. 0 for no particle, 1 for explosion, 2 for confetti.
 int deadParticles = 0;
 
 //------------------[ LENS FLARE ]------------------//
@@ -238,7 +238,7 @@ GLint tex_1_loc;
 GLint tex_2_loc;
 
 //GLint tex_2_loc;
-GLuint TextureArray[5];
+GLuint TextureArray[9];
 
 //------------------[ AUXILIARY FUNCS ]------------------//
 
@@ -282,7 +282,7 @@ void initParticles()
 		particlePos[i][1] = carPos[1];
 		particlePos[i][2] = carPos[2];
 
-		particleSpeed[i][0] = v * cos(theta) * sin(phi);
+		particleSpeed[i][0] = v * cos(theta);
 		particleSpeed[i][1] = v * cos(phi);
 		particleSpeed[i][2] = v * sin(theta) * sin(phi);
 
@@ -359,7 +359,7 @@ void updateScore() {
 		if (hasCollided(carPos, carDim, checkPoint0, checkPointSize0And2)) {
 			currentCheckPoint = 0;
 			score++;
-			drawParticles = true;
+			drawParticles = 2;
 			initParticles();
 		}
 
@@ -502,20 +502,26 @@ void resetCamera() {
 	updateCamera();
 }
 
+void carDie() {
+	drawParticles = 1;
+	initParticles();
+	if (lives > 1) {
+		lives--;
+		currentCheckPoint = 0;
+		resetCamera();
+		resetCar();
+		resetOranges();
+	}
+	else {
+		lives--;
+		isGameOver = true;
+	}
+}
+
 void collisionWithOranges() {
 	for (int i = 0; i < NUMBER_ORANGES; i++) {
 		if (hasCollided(carPos, carDim, orangePos[i], orangeDim)) {
-			if (lives > 1) {
-				lives--;
-				currentCheckPoint = 0;
-				resetCamera();
-				resetCar();
-				resetOranges();
-			}
-			else {
-				lives--;
-				isGameOver = true;
-			}
+			carDie();
 		}
 	}
 }
@@ -534,6 +540,9 @@ void resetGame() {
 
 void animateCar() {
 	float aux[3];
+
+	if (carPos[0] < -50.0f || carPos[0] > 50.0f || carPos[2] > 50.0f || carPos[2] < -50.0f)  // lose life if car is out of bounds
+		carDie();
 
 	if (carIsForward) {
 		if (carSpeed >= 0.0f)
@@ -613,7 +622,7 @@ void animateCheerios() {
 	for (int i = 0; i < NUMBER_CHEERIOS; i++) {
 
 		if (hasCollided(carPos, carDim, cheerioPos[i], cheerioDim)) {
-			drawParticles = true;
+			drawParticles = 1;
 			initParticles();
 
 			if (carSpeed >= 0.0f) {
@@ -961,13 +970,15 @@ void renderBillboard() {
 }
 
 void renderCarWheels() {
-	carWheelRotation += carSpeed * 50.0f;
+	if (!isPaused && !isGameOver)
+		carWheelRotation += carSpeed * 50.0f;
 	if (carWheelRotation > 360.0f) {
 		carWheelRotation -= 360.0f;
 	}
 	else if (carWheelRotation < 0.0f) {
 		carWheelRotation += 360.0f;
 	}
+
 
 	//Right back wheel
 
@@ -1087,19 +1098,30 @@ void renderScene(void) {
 	// Flare Ring
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
-	// Flare Source (?)
+	// Flare Sourcelight
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[3]);
 	// Sauron Eye
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
-
+	// Pause Screen
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[5]);
+	// Game Over Screen
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[6]);
+	// Particle explosion
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[7]);
+	// Particle confetti
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[8]);
 
 	pushMatrix(MODEL);
 
 	if (!isPaused && !isGameOver) {
 		animateCar();
-		//animateOranges();
+		animateOranges();
 		animateCheerios();
 		animateBillboard();
 		lamp_spin += 0.2f;
@@ -1174,6 +1196,54 @@ void renderScene(void) {
 	renderBillboard();
 	glUniform1i(texMode_UID, 0);
 
+	if (isPaused) {
+		glUniform1i(tex_1_loc, 5);
+
+		objID = 7;
+
+		pushMatrix(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(PROJECTION);
+		loadIdentity(VIEW);
+
+		ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
+
+		translate(MODEL, (float)WinX / 2.0f, (float) WinY / 2.0f, 0.0f);
+		scale(MODEL, 30.0f, 20.0f, 0.0f);
+
+		glUniform1i(texMode_UID, 4);
+		render();
+		glUniform1i(texMode_UID, 0);
+
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+
+	}
+
+	if (isGameOver) {
+		glUniform1i(tex_1_loc, 6);
+
+		objID = 7;
+
+		pushMatrix(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(PROJECTION);
+		loadIdentity(VIEW);
+
+
+		ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
+
+		translate(MODEL, (float)WinX / 2.0f, (float)WinY / 2.0f, 0.0f);
+		scale(MODEL, 30.0f, 20.0f, 0.0f);
+
+		glUniform1i(texMode_UID, 4);
+		render();
+		glUniform1i(texMode_UID, 0);
+
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+	}
+
 	loadIdentity(MODEL);
 
 	// OBJ Rendering
@@ -1194,16 +1264,24 @@ void renderScene(void) {
 	}
 	/**/
 
-	renderLensFlare();
+	if (!isPaused && !isGameOver)
+		renderLensFlare();
 
 	// Particles
 
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	glUniform1i(tex_1_loc, 4);
-	glUniform1i(texMode_UID, 2);
 	// Particles
-	if (drawParticles) {
+	if (drawParticles != 0) {
+
+		if (drawParticles == 1) {
+			glUniform1i(tex_1_loc, 7);
+			glUniform1i(texMode_UID, 5);
+		}
+
+		else {
+			glUniform1i(tex_1_loc, 8);
+			glUniform1i(texMode_UID, 5);
+		}
+
 		objID = 5;
 		for (int i = 0; i < MAX_PARTICLES; i++) {
 			if (particleLife[i] > 0.0f) {
@@ -1215,14 +1293,12 @@ void renderScene(void) {
 		}
 
 		if (deadParticles == MAX_PARTICLES) {
-			drawParticles = false;
+			drawParticles = 0;
 			deadParticles = 0;
 		}
 	}
 
 	glUniform1i(texMode_UID, 0);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
 
 	popMatrix(MODEL);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1266,7 +1342,7 @@ void keyDown(unsigned char key, int xx, int yy)
 		case 'r': resetGame();  break;
 
 		//game controls
-		case 'p': isPaused = !isPaused; break;
+		case 'p': if (!isGameOver) isPaused = !isPaused; break;
 
 		case 'w': carIsForward = true;  break;
 		case 's': carIsReverse = true;  break;
@@ -1471,12 +1547,18 @@ void init()
 {
 	updateCamera();
 
-	glGenTextures(4, TextureArray);
+	glGenTextures(9, TextureArray);
 	TGA_Texture(TextureArray, "textures/futuristic_grid.tga", 0);
 	TGA_Texture(TextureArray, "textures/hexagon.tga", 1);
 	TGA_Texture(TextureArray, "textures/ring.tga", 2);
 	TGA_Texture(TextureArray, "textures/sourcelight.tga", 3);
 	TGA_Texture(TextureArray, "textures/billboard.tga", 4);
+	TGA_Texture(TextureArray, "textures/pause.tga", 5);
+	TGA_Texture(TextureArray, "textures/game_over.tga", 6);
+	TGA_Texture(TextureArray, "textures/particle.tga", 7);
+	TGA_Texture(TextureArray, "textures/lap_particle.tga", 8);
+
+
 
 	//Model init
 
@@ -1550,6 +1632,12 @@ void init()
 
 	// BillBoard
 	objID = 6;
+
+	loadMaterials(ambTable, diffTable, specTable, null, shininess, texCount);
+	createQuad(7.5f, 7.5f);
+
+	// Pause/Game over screen
+	objID = 7;
 
 	loadMaterials(ambTable, diffTable, specTable, null, shininess, texCount);
 	createQuad(7.5f, 7.5f);

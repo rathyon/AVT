@@ -103,7 +103,7 @@ void main() {
 
 	} //end for
 
-	if(texMode == 1){
+	if(texMode == 1){ //table
 		texel1 = texture(texmap1, DataIn.tex_coord);
 		//texel2 = texture(texmap2, DataIn.tex_coord);
 
@@ -113,8 +113,9 @@ void main() {
 		colorOut = mix(fogColor, preFogColor, fogFactor);
 
 	}
-	else if(texMode == 2){
+	else if(texMode == 2){ //lens flare
 		texel2 = texture(texmap2, DataIn.tex_coord);
+
 		if (texel2.a != 0) {
             texel2.a = lensAlpha;
             colorOut = texel2;
@@ -122,7 +123,7 @@ void main() {
         else
            colorOut = texel2;
 	}
-	else if(texMode == 3){
+	else if(texMode == 3){ //billboard
 		texel1 = texture(texmap1, DataIn.tex_coord);
 
 		float billX = (DataIn.tex_coord.x - 0.5f) * (DataIn.tex_coord.x - 0.5f);
@@ -138,6 +139,18 @@ void main() {
 		}
 		else
 			discard;
+	}
+	else if(texMode == 4) { //pause and game over screens
+		texel1 = texture(texmap1, DataIn.tex_coord);
+		if (texel1.r < 0.5)
+			discard;
+		colorOut = vec4(0, 0, 0, 1);
+	}
+	else if(texMode == 5) { //particles
+		texel1 = texture(texmap1, DataIn.tex_coord);
+		if (texel1.a < 0.5)
+			discard;
+		colorOut = texel1;
 	}
 	else {
 
