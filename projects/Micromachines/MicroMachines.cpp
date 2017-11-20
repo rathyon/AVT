@@ -305,10 +305,17 @@ void iterate(int value)
 			particlePos[i][0] += h*particleSpeed[i][0];
 			particlePos[i][1] += h*particleSpeed[i][1];
 			particlePos[i][2] += h*particleSpeed[i][2];
+
 			particleSpeed[i][0] += h*particleAcc[0];
 			particleSpeed[i][1] += h*particleAcc[1];
 			particleSpeed[i][2] += h*particleAcc[2];
-			particleLife[i] -= particleFade[i];
+
+			if (particlePos[i][1] < -5.0f) {
+				particleLife[i] = 0.0f;
+			}
+
+			else
+				particleLife[i] -= particleFade[i];
 		}
 	}
 
@@ -954,7 +961,7 @@ void renderBillboard() {
 }
 
 void renderCarWheels() {
-	carWheelRotation += carSpeed * 15.0f;
+	carWheelRotation += carSpeed * 50.0f;
 	if (carWheelRotation > 360.0f) {
 		carWheelRotation -= 360.0f;
 	}
@@ -1143,29 +1150,6 @@ void renderScene(void) {
 	meshID = 6;
 	renderCarWheels();
 
-	glDisable(GL_CULL_FACE);
-	glUniform1i(tex_1_loc, 4);
-	glUniform1i(texMode_UID, 2);
-	// Particles
-	if (drawParticles) {
-		objID = 5;
-		for (int i = 0; i < MAX_PARTICLES; i++) {
-			if (particleLife[i] > 0.0f) {
-				translate(MODEL, particlePos[i][0], particlePos[i][1] +3, particlePos[i][2]);
-				renderBillboard();
-			}
-
-			else deadParticles++;
-		}
-
-		if (deadParticles == MAX_PARTICLES) {
-			drawParticles = false;
-			deadParticles = 0;
-		}
-	}
-	glUniform1i(texMode_UID, 0);
-	glEnable(GL_CULL_FACE);
-
 	//Old Billboard
 	/** /
 	glActiveTexture(GL_TEXTURE0);
@@ -1211,6 +1195,34 @@ void renderScene(void) {
 	/**/
 
 	renderLensFlare();
+
+	// Particles
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glUniform1i(tex_1_loc, 4);
+	glUniform1i(texMode_UID, 2);
+	// Particles
+	if (drawParticles) {
+		objID = 5;
+		for (int i = 0; i < MAX_PARTICLES; i++) {
+			if (particleLife[i] > 0.0f) {
+				translate(MODEL, particlePos[i][0], particlePos[i][1] + 3, particlePos[i][2]);
+				renderBillboard();
+			}
+
+			else deadParticles++;
+		}
+
+		if (deadParticles == MAX_PARTICLES) {
+			drawParticles = false;
+			deadParticles = 0;
+		}
+	}
+
+	glUniform1i(texMode_UID, 0);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
 
 	popMatrix(MODEL);
 	glBindTexture(GL_TEXTURE_2D, 0);
