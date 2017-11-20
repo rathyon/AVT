@@ -176,7 +176,7 @@ float cheerioDim[2] = { 1.0f, 1.0f };
 float orangePos[NUMBER_ORANGES][4];
 float orangeSpeed[NUMBER_ORANGES];
 float orangeRotation[NUMBER_ORANGES];
-float orangeRotationFactor = 6.0f;
+float orangeRotationFactor = 12.0f;
 float orangeAcceleration[NUMBER_ORANGES];
 float orangeDim[2] = { 2.0f, 2.0f };
 
@@ -217,7 +217,7 @@ float candleAttenuation = 0.2f;
 
 //------------------[ PARTICLES ]------------------//
 
-#define MAX_PARTICLES 250
+#define MAX_PARTICLES 50
 #define frand() ((float)rand() / RAND_MAX) // random float between 0 and 1
 
 float particlePos[MAX_PARTICLES][3];
@@ -1051,19 +1051,38 @@ void displayLives(int w, int h) {
 	}
 
 
+	glClear(GL_STENCIL_BUFFER_BIT);
+
+	glStencilFunc(GL_NEVER, 0x1, 0x1);
+	glStencilOp(GL_REPLACE, GL_KEEP, GL_KEEP);
+
+	objID = 1;
+	translate(MODEL, z - 1.5f, 0.0f, x - 7.0f);
+	scale(MODEL, 4.0f, 3.0f, 11.0f);
+	render();
+
+	//inside stencil
+	glStencilFunc(GL_EQUAL, 0x1, 0x1);
+
 	for (int i = 0; i < lives; i++) {
 		livesPos[i][0] = z;
 		livesPos[i][1] = 1.0f;
-		livesPos[i][2] = x - 1.5f*i;
+		livesPos[i][2] = x - 1.5f*(i-1);
+		/** /
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_INVERT);
 		glStencilMask(0xFF);
+		/**/
+
 		meshID = 3;
 		translate(MODEL, livesPos[i][0], livesPos[i][1], livesPos[i][2]);
 		scale(MODEL, 0.01f, 0.01f, 0.01f);
 		rotate(MODEL, 180.0f, 0,1,0);
 		renderMesh();
 	}
+
+	//outside stencil
+	glStencilFunc(GL_NOTEQUAL, 0x1, 0x1);
 
 	popMatrix(PROJECTION);
 	popMatrix(MODEL);
@@ -1145,7 +1164,6 @@ void renderScene(void) {
 
 
 	//--------[ Remember: the first transform is the last one coded! ]--------\\
-
 	// Table
 	objID = 0;
 	translate(MODEL, 0.0f, -50.0f, 0.0f);
@@ -1208,54 +1226,6 @@ void renderScene(void) {
 	renderBillboard();
 	glUniform1i(texMode_UID, 0);
 
-	if (isPaused) {
-		glUniform1i(tex_1_loc, 5);
-
-		objID = 7;
-
-		pushMatrix(PROJECTION);
-		pushMatrix(VIEW);
-		loadIdentity(PROJECTION);
-		loadIdentity(VIEW);
-
-		ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
-
-		translate(MODEL, (float)WinX / 2.0f, (float) WinY / 2.0f, 0.0f);
-		scale(MODEL, 30.0f, 20.0f, 0.0f);
-
-		glUniform1i(texMode_UID, 4);
-		render();
-		glUniform1i(texMode_UID, 0);
-
-		popMatrix(PROJECTION);
-		popMatrix(VIEW);
-
-	}
-
-	if (isGameOver) {
-		glUniform1i(tex_1_loc, 6);
-
-		objID = 7;
-
-		pushMatrix(PROJECTION);
-		pushMatrix(VIEW);
-		loadIdentity(PROJECTION);
-		loadIdentity(VIEW);
-
-
-		ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
-
-		translate(MODEL, (float)WinX / 2.0f, (float)WinY / 2.0f, 0.0f);
-		scale(MODEL, 30.0f, 20.0f, 0.0f);
-
-		glUniform1i(texMode_UID, 4);
-		render();
-		glUniform1i(texMode_UID, 0);
-
-		popMatrix(PROJECTION);
-		popMatrix(VIEW);
-	}
-
 	loadIdentity(MODEL);
 
 	// OBJ Rendering
@@ -1276,9 +1246,63 @@ void renderScene(void) {
 	}
 	/**/
 
-	// I don't think this is needed
-	if (!isPaused && !isGameOver)
-		renderLensFlare();
+	renderLensFlare();
+	if (isPaused) {
+		glDisable(GL_DEPTH_FUNC);
+		glDisable(GL_BLEND);
+		glUniform1i(tex_1_loc, 5);
+
+		objID = 7;
+
+		pushMatrix(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(PROJECTION);
+		loadIdentity(VIEW);
+
+		ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
+
+		translate(MODEL, (float)WinX / 2.0f, (float)WinY / 2.0f, 0.5f);
+		scale(MODEL, 30.0f, 20.0f, 0.0f);
+
+		glUniform1i(texMode_UID, 4);
+		render();
+		glUniform1i(texMode_UID, 0);
+
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+		glEnable(GL_DEPTH_FUNC);
+		glEnable(GL_BLEND);
+
+	}
+
+	if (isGameOver) {
+		glDisable(GL_DEPTH_FUNC);
+		glDisable(GL_BLEND);
+		glUniform1i(tex_1_loc, 6);
+
+		objID = 7;
+
+		pushMatrix(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(PROJECTION);
+		loadIdentity(VIEW);
+
+
+		ortho(0, (float)WinX, 0, (float)WinY, -1, 1);
+
+		translate(MODEL, (float)WinX / 2.0f, (float)WinY / 2.0f, 0.5f);
+		scale(MODEL, 30.0f, 20.0f, 0.0f);
+
+		glUniform1i(texMode_UID, 4);
+		render();
+		glUniform1i(texMode_UID, 0);
+
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+		glEnable(GL_DEPTH_FUNC);
+		glEnable(GL_BLEND);
+	}
+
 
 	// Particles
 	if (drawParticles != 0) {
@@ -1606,9 +1630,9 @@ void init()
 
 	// Cheerios
 
-	float ambCheerio[4] = { 0.01f, 0.02f, 0.0f, 1.0f };
-	float diffCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
-	float specCheerio[4] = { 0.55f, 0.3f, 0.0f, 1.0f };
+	float ambCheerio[4] = { 0.0f, 0.06f, 0.02f, 1.0f };
+	float diffCheerio[4] = { 0.0f, 0.3f, 0.2f, 1.0f };
+	float specCheerio[4] = { 0.0f, 0.3f, 0.2f, 1.0f };
 
 	objID = 2;
 	loadMaterials(ambCheerio, diffCheerio, specCheerio, null, shininess, texCount);
@@ -1617,9 +1641,9 @@ void init()
 	// Oranges
 	objID = 3;
 
-	float ambOrange[4] = { 0.1f, 0.07f, 0.0f, 1.0f };
-	float diffOrange[4] = {1.0f, 0.7f, 0.0f, 1.0f};
-	float specOrange[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	float ambOrange[4] = { 0.1f, 0.0f, 0.0f, 1.0f };
+	float diffOrange[4] = { 0.6f, 0.0f, 0.0f, 1.0f };
+	float specOrange[4] = { 0.6f, 0.0f, 0.0f, 1.0f };
 
 	loadMaterials(ambOrange, diffOrange, specOrange, null, shininess, texCount);
 	createSphere(orangeDim[1] / 2.0f, 30);
@@ -1691,7 +1715,7 @@ void init()
 	Mesh life = Mesh("models/car.obj");
 	objMesh.push_back(life);
 
-	float ambLife[4] = { 0.7f, 0.0f, 0.0f, 1.0f };
+	float ambLife[4] = { 0.4f, 0.0f, 0.0f, 1.0f };
 	float diffLife[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	float specLife[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -1726,6 +1750,11 @@ void init()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_MULTISAMPLE);
+	glutInitDisplayMode(GLUT_STENCIL);
+	glEnable(GL_STENCIL_TEST);
+
+	glClearStencil(0);
+	glClear(GL_STENCIL_BUFFER_BIT);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
