@@ -3,7 +3,8 @@
 
 var scene,
 	renderer,
-	camera;
+	camera,
+    controls;
 
 var geo, mat, plane;
 
@@ -15,7 +16,7 @@ mat = new THREE.MeshPhongMaterial({color: 0x00ffff, specular: 0xffffff, shinines
 
 mat = new THREE.MeshBasicMaterial({color: 0x00ffff});
 
-//var manager = new THREE.LoadingManager();
+/*var manager = new THREE.LoadingManager();
 var loader = new THREE.TextureLoader();
 
 var bmap =  loader.load("js/textures/normal.tga");
@@ -31,8 +32,9 @@ var oldMaterial = new THREE.MeshPhongMaterial({
   //map        :  map,
   bumpScale  :  0.45,
 });
+*/
 
-plane = new THREE.Mesh(geo, oldMaterial);
+plane = new THREE.Mesh(geo, mat);
 
 var init = function() {
 	scene = new THREE.Scene();
@@ -62,6 +64,9 @@ var init = function() {
 
     plane.rotateOnAxis(new THREE.Vector3(1,0,0), THREE.Math.degToRad(-90));
 
+    controls = new THREE.OrbitControls( camera, renderer.domElement );
+    controls.addEventListener( 'change', render );
+
 	renderScene();
 
 };
@@ -73,5 +78,6 @@ var render = function (){
 var renderScene = function() {
 
 	requestAnimationFrame(renderScene);
+    controls.update();
 	render();
 };
