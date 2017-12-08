@@ -6,7 +6,20 @@ var scene,
     controls;
 
 // ----------[ Camera ]----------\\
-var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
+var camChase = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
+camChase.position.set(0, 50, 50);
+camChase.lookAt(new THREE.Vector3(0,0,0));
+
+var camOrtho = new THREE.OrthographicCamera(window.innerWidth/-4, window.innerWidth/4, window.innerHeight/4, window.innerHeight/-4, 0.1, 10000);
+camOrtho.position.set(0,50,0);
+camOrtho.lookAt(new THREE.Vector3(0,0,0));
+
+var camTop = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
+camTop.position.set(300,200,0);
+camTop.lookAt(new THREE.Vector3(0,0,0));
+
+//active camera
+var camera = camChase;
 
 // ----------[ Diretional Light ]----------\\
 var directional_light = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -68,14 +81,16 @@ var init = function() {
 	scene = new THREE.Scene();
 	
 	//Window
-    renderer = new THREE.WebGLRenderer();
+    renderer = new THREE.WebGLRenderer({alpha : true});
+    renderer.setClearColor(0x000000, 1.0);
     renderer.setSize(window.innerWidth, window.innerHeight);
 	document.body.appendChild( renderer.domElement );
 	
-	//Camera
-	car.add(camera);
-	camera.position.set(0, 50, 50);
-	camera.lookAt(new THREE.Vector3(0,0,0));
+	//Cameras
+	scene.add(camOrtho);
+	scene.add(camTop);
+
+	car.add(camChase);
 
 	window.addEventListener('resize', resize);
 	
@@ -108,6 +123,7 @@ var init = function() {
 };
 
 var keyDown = function (event) {
+	//movement keys
 	if(event.key == 'w'){
 		forward = true;
 	}
@@ -119,6 +135,16 @@ var keyDown = function (event) {
 	}
 	else if(event.key == 'd'){
 		right = true;
+	}
+	//camera switching
+	else if(event.key == '1'){
+		camera = camOrtho;
+	}
+	else if(event.key == '2'){
+		camera = camTop;
+	}
+	else if(event.key == '3'){
+		camera = camChase;
 	}
 };
 
@@ -154,8 +180,18 @@ var animate = function(){
 
 var resize = function() {
 	renderer.setSize(window.innerWidth, window.innerHeight);
-	camera.aspect = window.innerWidth/window.innerHeight;
-	camera.updateProjectionMatrix();
+
+	camChase.aspect = window.innerWidth/window.innerHeight;
+	camChase.updateProjectionMatrix();
+
+	camOrtho.left = window.innerWidth/-4;
+	camOrtho.right = window.innerWidth/4;
+	camOrtho.top = window.innerHeight/4;
+	camOrtho.bottom = window.innerHeight/-4;
+	camOrtho.updateProjectionMatrix();
+
+	camTop.aspect = window.innerWidth/window.innerHeight;
+	camTop.updateProjectionMatrix();
 };
 
 var render = function (){
