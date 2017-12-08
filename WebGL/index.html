@@ -26,6 +26,38 @@
 	<body>
 		<script src="three.js/build/three.min.js"></script>
 		<script src="js/OrbitControls.js"></script>
+		<script src="js/obj-loader.js"></script>
+
+		<script type="x-shader/x-vertex" id="vertexShader">
+			varying vec3 vNormal;
+			varying vec3 dir_l;
+
+			void main(){
+				vNormal = normalMatrix * normal;
+
+				// need to supply this info thru uniform
+				vec3 sun = normalize(vec3(0, 1, 0.2));
+            	dir_l = normalize(vec3(viewMatrix * vec4(sun, 0.0)));
+
+				gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
+			}
+		</script>
+		<script type="x-shader/x-vertex" id="fragmentShader">
+			uniform vec3 color;
+
+			varying vec3 vNormal;
+			varying vec3 dir_l;
+			void main() {
+
+				vec3 norm = normalize(vNormal);
+
+	            // Calculate diffuse component
+	            float NdotL = max(0.15, dot(norm, dir_l));
+
+	            gl_FragColor = vec4(NdotL * color, 1);
+			}
+		</script>
+		
 		<script src="js/MicroMachines.js"></script>
 		<script> (function(window, document){ init(); })(); </script>
 	</body>

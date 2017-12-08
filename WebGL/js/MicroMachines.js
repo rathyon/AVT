@@ -18,9 +18,12 @@ light.position.y = 200;
 light.position.x = 200;
 
 // ----------[ Geometry ]----------\\
+var geo_loader = new THREE.OBJLoader();
+
 var floor_geo = new THREE.PlaneGeometry(256,256);
 
 var car_geo = new THREE.BoxGeometry(3,3,3);
+//var car_geo = geo_loader.load('js/models/spiked_ball.obj', function(){console.log("obj load started")});
 
 // ----------[ Materials ]----------\\
 var tex_loader = new THREE.TextureLoader();
@@ -36,10 +39,24 @@ var floor_mat = new THREE.MeshPhongMaterial({
   map        :  map,
 });
 
+var shader_mat = new THREE.ShaderMaterial({
+
+	uniforms : {
+		color : { value : new THREE.Color(0x666666) }
+	},
+
+	vertexShader : document.getElementById('vertexShader').textContent,
+
+	fragmentShader : document.getElementById('fragmentShader').textContent
+
+});
+
+var debugMat = new THREE.MeshBasicMaterial({color: 0xff0000});
+
 // ----------[ Meshes ]----------\\
 var floor = new THREE.Mesh(floor_geo, floor_mat);
 
-var car = new THREE.Mesh(car_geo, floor_mat);
+var car = new THREE.Mesh(car_geo, shader_mat);
 
 var forward = false;
 var backward = false;
