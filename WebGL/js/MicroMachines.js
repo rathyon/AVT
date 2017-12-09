@@ -5,6 +5,8 @@ var scene,
 	renderer,
     controls;
 
+var tex_loader = new THREE.TextureLoader();
+
 // ----------[ Camera ]----------\\
 var camChase = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
 camChase.position.set(0, 50, 50);
@@ -26,9 +28,38 @@ var directional_light = new THREE.DirectionalLight(0xffffff, 1.5);
 directional_light.position.set(0, 100, 70);
 
 // ----------[ Point Lights ]----------\\
-var light = new THREE.PointLight( 0xffffff, 2.5);
-light.position.y = 200;
-light.position.x = 200;
+var light1 = new THREE.PointLight( 0x00ffff, 1.8);
+light1.position.set(200, 50, 0);
+
+var light2 = new THREE.PointLight( 0xffff00, 1.8);
+light2.position.set(-200, 50, 0);
+
+//wtf is wrong with the spotlight ?!?!
+var spotlight = new THREE.SpotLight(0xffffff);
+spotlight.position.set(0,5, 5);
+spotlight.castShadow = true;
+
+//Set up shadow properties for the spotlight
+spotlight.shadow.mapSize.width = 512;  // default
+spotlight.shadow.mapSize.height = 512; // default
+spotlight.shadow.camera.near = 0.5;       // default
+spotlight.shadow.camera.far = 500      // default
+
+var sourcelight = tex_loader.load('js/textures/sourcelight.png');
+var hexagon = tex_loader.load('js/textures/hexagon.png');
+var ring = tex_loader.load('js/textures/ring.png');
+var flareColor = new THREE.Color( 0x00ffff );
+
+// LensFlare( texture, size, distance, blending, color )
+//distance - (optional) (0-1) from light source (0 = at light source, 1 = opposite end) 
+var lensFlare = new THREE.LensFlare( sourcelight, 100, 0.05, THREE.AdditiveBlending, flareColor );
+lensFlare.position.copy( light1.position );
+// .add ( texture, size, distance, blending, color )
+lensFlare.add(ring, 200, 0.1, THREE.AdditiveBlending, flareColor);
+lensFlare.add(hexagon, 50, 0.3, THREE.AdditiveBlending, flareColor);
+lensFlare.add(ring, 100, 0.55, THREE.AdditiveBlending, flareColor);
+lensFlare.add(sourcelight, 75, 0.7, THREE.AdditiveBlending, flareColor);
+lensFlare.add(hexagon, 90, 0.9, THREE.AdditiveBlending, flareColor);
 
 // ----------[ Geometry ]----------\\
 var geo_loader = new THREE.OBJLoader();
@@ -39,8 +70,6 @@ var car_geo = new THREE.BoxGeometry(3,3,3);
 //var car_geo = geo_loader.load('js/models/spiked_ball.obj', function(){console.log("obj load started")});
 
 // ----------[ Materials ]----------\\
-var tex_loader = new THREE.TextureLoader();
-
 var bmap = tex_loader.load('js/textures/normal.png');
 var map = tex_loader.load('js/textures/stone.png');
 
@@ -52,10 +81,29 @@ var floor_mat = new THREE.MeshPhongMaterial({
   map        :  map,
 });
 
-var shader_mat = new THREE.ShaderMaterial({
+// THIS MATERIAL WILL ONLY WORK WITH PLANE GEOMETRY
+/*
+var bumpMat = new THREE.ShaderMaterial({
 
 	uniforms : {
-		color : { value : new THREE.Color(0x666666) }
+		color : { value : new THREE.Color(0x666666) },
+		light : { value : light.position },
+		texture : { type: "t", value : tex_loader.load('js/textures/normal.png')} 
+	},
+
+	vertexShader : document.getElementById('bumpVertexShader').textContent,
+
+	fragmentShader : document.getElementById('bumpFragmentShader').textContent
+
+});
+*/
+
+// Default shader material that uses base color
+var shaderMat = new THREE.ShaderMaterial({
+
+	uniforms : {
+		color : { value : new THREE.Color(0x666666) },
+		light : { value : light1.position }
 	},
 
 	vertexShader : document.getElementById('vertexShader').textContent,
@@ -68,8 +116,9 @@ var debugMat = new THREE.MeshBasicMaterial({color: 0xff0000});
 
 // ----------[ Meshes ]----------\\
 var floor = new THREE.Mesh(floor_geo, floor_mat);
+floor.receiveShadow = true;
 
-var car = new THREE.Mesh(car_geo, shader_mat);
+var car = new THREE.Mesh(car_geo, floor_mat);
 
 var forward = false;
 var backward = false;
@@ -94,13 +143,16 @@ var init = function() {
 
 	window.addEventListener('resize', resize);
 	
-	//Point light
-	//scene.add(light);
+	//Lights
+	scene.add(light1);
+	scene.add(light2);
+	car.add(spotlight);
+	scene.add( lensFlare );
+
+	//scene.add(directional_light);
 
 	//Axis Helper
     scene.add(new THREE.AxisHelper(10));
-	
-	scene.add(directional_light);
 
 	//Objects setup
     scene.add(floor);

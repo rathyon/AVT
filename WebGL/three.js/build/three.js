@@ -14761,6 +14761,9 @@
 		var normals = [];
 		var uvs = [];
 
+		// AVT MODIFICATIONS
+		var tangents = [];
+
 		// generate vertices, normals and uvs
 
 		for ( iy = 0; iy < gridY1; iy ++ ) {
@@ -14774,6 +14777,8 @@
 				vertices.push( x, - y, 0 );
 
 				normals.push( 0, 0, 1 );
+				// and tangents
+				tangents.push( 1, 0, 0 );
 
 				uvs.push( ix / gridX );
 				uvs.push( 1 - ( iy / gridY ) );
@@ -14808,6 +14813,7 @@
 		this.addAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
 		this.addAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
 		this.addAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+		this.addAttribute( 'tangent', new Float32BufferAttribute( tangents, 3 ) );
 
 	}
 

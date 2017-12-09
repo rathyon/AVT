@@ -29,15 +29,19 @@
 		<script src="js/obj-loader.js"></script>
 
 		<script type="x-shader/x-vertex" id="vertexShader">
-			varying vec3 vNormal;
-			varying vec3 dir_l;
+			uniform vec3 light;
 
+			varying vec3 vNormal;
+			varying vec3 l;
+			varying vec3 h;
 			void main(){
 				vNormal = normalMatrix * normal;
 
-				// need to supply this info thru uniform
-				vec3 sun = normalize(vec3(0, 1, 0.2));
-            	dir_l = normalize(vec3(viewMatrix * vec4(sun, 0.0)));
+				vec3 lightPos = vec3 ((viewMatrix * modelMatrix) * vec4(light, 1.0) );
+				vec3 eyePos = vec3((viewMatrix * modelMatrix) * vec4(position, 1.0) );
+
+				l = normalize(lightPos - eyePos);
+				h = normalize(l + eyePos);
 
 				gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
 			}
@@ -46,15 +50,66 @@
 			uniform vec3 color;
 
 			varying vec3 vNormal;
-			varying vec3 dir_l;
+			varying vec3 l;
+			varying vec3 h;
 			void main() {
 
 				vec3 norm = normalize(vNormal);
 
 	            // Calculate diffuse component
-	            float NdotL = max(0.15, dot(norm, dir_l));
+	            float NdotL = max(0.15, dot(norm, l));
+	            float HdotN = max(dot(h,norm), 0.0);
 
-	            gl_FragColor = vec4(NdotL * color, 1);
+	            gl_FragColor = vec4(NdotL * color + HdotN * color, 1);
+			}
+		</script>
+
+		<!-- SHADERS FOR BUMP MAPPING -->
+		<script type="x-shader/x-vertex" id="bumpVertexShader">
+			uniform vec3 light;
+
+			varying vec3 l;
+			varying vec3 h;
+
+			void main(){
+				vec3 lightPos = vec3 ((viewMatrix * modelMatrix) * vec4(light, 1.0) );
+
+				vec3 eyePos = vec3((viewMatrix * modelMatrix) * vec4(position, 1.0) );
+				vec3 lightDir = normalize(lightPos - eyePos);
+
+				vec3 n = normalize(normalMatrix * normal);
+				vec3 t = normalize(normalMatrix * tangent);
+				vec3 b = cross(n,t);
+
+            	vec3 v;	
+				v.x	= dot(lightDir, t);	
+				v.y	= dot(lightDir, b);	
+				v.z	= dot(lightDir, n);	
+				l = normalize (v);
+
+				vec3 halfVec = normalize(lightDir - eyePos);
+				v.x = dot(halfVec, t);
+				v.y = dot(halfVec, b);
+				v.z = dot(halfVec, n);
+				h = normalize(v);
+
+				gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
+			}
+		</script>
+		<script type="x-shader/x-vertex" id="bumpFragmentShader">
+			uniform vec3 color;
+			uniform sampler2D texture;
+
+			varying vec3 l;
+			varying vec3 h;
+
+			void main() {
+				vec3 normal = 2.0 * texture(texture, uv).rgb - 1.0;
+				normal = normalize(normal);
+
+				float NdotL = max(dot(l, normal), 0.0);
+
+	            gl_FragColor = vec4(NdotL * color, 1.0);
 			}
 		</script>
 		
