@@ -43,10 +43,10 @@ directional_light.position.set(0, 100, 70);
 
 // ----------[ Point Lights ]----------\\
 
-var light1 = new THREE.PointLight( 0x00ffff, 1.8);
+var light1 = new THREE.PointLight( 0x00ffff, 0.5);
 light1.position.set(200, 50, 0);
 
-var light2 = new THREE.PointLight( 0xffff00, 1.8);
+var light2 = new THREE.PointLight( 0xffcc66, 2);
 light2.position.set(-200, 50, 0);
 
 //wtf is wrong with the spotlight ?!?!
@@ -77,6 +77,18 @@ lensFlare.add(hexagon, 50, 0.3, THREE.AdditiveBlending, flareColor);
 lensFlare.add(ring, 100, 0.55, THREE.AdditiveBlending, flareColor);
 lensFlare.add(sourcelight, 75, 0.7, THREE.AdditiveBlending, flareColor);
 lensFlare.add(hexagon, 90, 0.9, THREE.AdditiveBlending, flareColor);
+
+// ----------[ Mirror ]----------\\
+
+var mirror = new THREE.Reflector( 70, 35, {
+	clipBias: 0.003,
+	textureWidth: window.innerWidth * window.devicePixelRatio,
+	textureHeight: window.innerHeight * window.devicePixelRatio,
+	color: 0x777777,
+	recursion: 1
+} );
+
+mirror.position.set(0, 17.5, -50);
 
 // ----------[ Geometry ]----------\\
 
@@ -156,6 +168,9 @@ var floor = new THREE.Mesh(floor_geo, floor_mat);
 floor.receiveShadow = true;
 
 var car = new THREE.Mesh(car_geo, floor_mat);
+
+var wall = new THREE.Mesh(floor_geo, floor_mat);
+wall.position.set(0,50,-50.5);
 
 // ----------[ Cheerios ]----------\\
 
@@ -237,8 +252,10 @@ var init = function() {
 
 	//Objects setup
     scene.add(floor);
+    scene.add(wall);
     //lay down horizontally
     floor.rotateX(THREE.Math.degToRad(-90));
+    scene.add(mirror);
 
     scene.add(car);
 	
@@ -249,7 +266,7 @@ var init = function() {
     controls = new THREE.OrbitControls( camera, renderer.domElement );
     controls.addEventListener('change', render);
 
-    //Key Down
+    //Key Down/Up
     document.addEventListener('keydown', keyDown);
     document.addEventListener('keyup', keyUp);
 
