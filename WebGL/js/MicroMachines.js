@@ -25,7 +25,7 @@ const axisZ = new THREE.Vector3(0, 0, 1);
 // ----------[ Camera ]----------\\
 
 var camChase = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
-camChase.position.set(0, 50, 50);
+camChase.position.set(-25, 10, 0);
 camChase.lookAt(new THREE.Vector3(0,0,0));
 
 var camOrtho = new THREE.OrthographicCamera(window.innerWidth/-18, window.innerWidth/18, window.innerHeight/18, window.innerHeight/-18, 0.1, 10000);
@@ -48,9 +48,19 @@ directional_light.position.set(0, 100, 70);
 
 var light1 = new THREE.PointLight( 0x00ffff, 0.5);
 light1.position.set(200, 50, 0);
+light1.castShadow = true;
+light1.shadow.mapSize.width = 2048;
+light1.shadow.mapSize.height = 2048;
+light1.shadow.camera.near = 0.5;
+light1.shadow.camera.far = 500;
 
 var light2 = new THREE.PointLight( 0xffcc66, 2);
 light2.position.set(-200, 50, 0);
+light2.castShadow = true;
+light2.shadow.mapSize.width = 2048;
+light2.shadow.mapSize.height = 2048;
+light2.shadow.camera.near = 0.5;
+light2.shadow.camera.far = 500;
 
 //wtf is wrong with the spotlight ?!?!
 var spotlight = new THREE.SpotLight(0xffffff);
@@ -61,7 +71,7 @@ spotlight.castShadow = true;
 spotlight.shadow.mapSize.width = 512;  // default
 spotlight.shadow.mapSize.height = 512; // default
 spotlight.shadow.camera.near = 0.5;       // default
-spotlight.shadow.camera.far = 500      // default
+spotlight.shadow.camera.far = 500;     // default
 
 // ----------[ Lens Flare ]----------\\
 
@@ -203,6 +213,7 @@ var floor = new THREE.Mesh(floor_geo, floor_mat);
 floor.receiveShadow = true;
 
 var car = new THREE.Mesh(car_geo, floor_mat);
+car.castShadow = true;
 
 var wall = new THREE.Mesh(floor_geo, floor_mat);
 wall.position.set(0,50,-50.5);
@@ -308,6 +319,7 @@ var init = function() {
     renderer.setClearColor(0x000000, 1.0);
     renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.autoClear = false;
+	renderer.shadowMap.enabled = true;
 	document.body.appendChild( renderer.domElement );
 	
 	//Cameras
@@ -322,6 +334,7 @@ var init = function() {
 	scene.add(light1);
 	scene.add(light2);
 	car.add(spotlight);
+	spotlight.visible = false;
 	scene.add( lensFlare );
 
 	//scene.add(directional_light);
@@ -409,6 +422,7 @@ function resetCheerios() {
 		cheerio[i].translateX(20);
 		cheerio[i].rotateX(Math.PI / 2);
 		cheerio[i].position.y += 0.5;
+		cheerio[i].castShadow = true;
 		scene.add(cheerio[i]);
 	}
 
@@ -420,6 +434,7 @@ function resetCheerios() {
 		cheerio[i].translateX(40);
 		cheerio[i].rotateX(Math.PI / 2);
 		cheerio[i].position.y += 0.5;
+		cheerio[i].castShadow = true;
 		scene.add(cheerio[i]);
 	}
 	
@@ -431,6 +446,7 @@ function resetOranges() {
 		orange[i] = new THREE.Mesh(orange_geo, orange_mat);
 		orange[i].position.set(-50, 1, -30+(15*i));
 		scene.add(orange[i]);
+		orange[i].castShadow = true;
 
 		orangeSpeed[i] = getRandomFloat(0.15, 0.45);
 		orangeAcceleration[i] = getRandomFloat(0.001, 0.004);
