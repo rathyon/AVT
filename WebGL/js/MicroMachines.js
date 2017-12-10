@@ -117,8 +117,6 @@ var orange_geo = new THREE.SphereGeometry ( 1, 30, 30 );
 
 var checkpoint0and2_geo = new THREE.PlaneGeometry(21, 2);
 var checkpoint1and3_geo = new THREE.PlaneGeometry(2, 21);
-//var car_geo = geo_loader.load('js/models/spiked_ball.obj', function(){console.log("obj load started")});
-
 
 // ----------[ Materials ]----------\\
 
@@ -176,6 +174,10 @@ var orange_mat = new THREE.MeshPhongMaterial({
   shininess  :  1000,
 });
 
+var car_mat = new THREE.MeshPhongMaterial({
+  color : 0xcc0033,
+});
+
 var life_mat = new THREE.MeshBasicMaterial({
   color : 0x666666,
   map: map
@@ -212,8 +214,17 @@ var debugMat = new THREE.MeshBasicMaterial({color: 0xff0000});
 var floor = new THREE.Mesh(floor_geo, floor_mat);
 floor.receiveShadow = true;
 
-var car = new THREE.Mesh(car_geo, floor_mat);
-car.castShadow = true;
+var car = new THREE.Object3D();
+geo_loader.load('js/models/car.obj', function(object){
+		object.traverse(function(child){
+			if(child instanceof THREE.Mesh){
+				car.add(child);
+				child.material = car_mat;
+				child.castShadow = true;
+			}
+		});
+	});
+car.scale.set(2,2,2);
 
 var wall = new THREE.Mesh(floor_geo, floor_mat);
 wall.position.set(0,50,-50.5);
@@ -298,7 +309,16 @@ function createHUD()
 	hudScene = new THREE.Scene();
 	
 	for (var i = 0; i < lives; i++) {
-		livesObj[i] = new THREE.Mesh( car_geo.clone(), life_mat )
+		livesObj[i] = new THREE.Object3D();
+		geo_loader.load('js/models/car.obj', function(object){
+			object.traverse(function(child){
+				if(child instanceof THREE.Mesh){
+					livesObj[i].add(child);
+					child.material = life_mat;
+					child.castShadow = true;
+				}
+			});
+		});
 		livesObj[i].scale.set(5, 5, 1);
 		livesObj[i].position.set(92-(i*8), 47, 0);
 		hudScene.add(livesObj[i]);
