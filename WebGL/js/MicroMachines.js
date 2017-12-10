@@ -2,6 +2,8 @@
 'use strict';
 
 var scene,
+	hudScene,
+	hudCamera,
 	renderer,
     controls;
 
@@ -19,18 +21,19 @@ const axisX = new THREE.Vector3(1, 0, 0);
 const axisY = new THREE.Vector3(0, 1, 0);
 const axisZ = new THREE.Vector3(0, 0, 1);
 
+
 // ----------[ Camera ]----------\\
 
 var camChase = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
 camChase.position.set(0, 50, 50);
 camChase.lookAt(new THREE.Vector3(0,0,0));
 
-var camOrtho = new THREE.OrthographicCamera(window.innerWidth/-4, window.innerWidth/4, window.innerHeight/4, window.innerHeight/-4, 0.1, 10000);
-camOrtho.position.set(0,1,0);
+var camOrtho = new THREE.OrthographicCamera(window.innerWidth/-18, window.innerWidth/18, window.innerHeight/18, window.innerHeight/-18, 0.1, 10000);
+camOrtho.position.set(0,10,0);
 camOrtho.lookAt(new THREE.Vector3(0,0,0));
 
 var camTop = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
-camTop.position.set(300,200,0);
+camTop.position.set(75,50,0);
 camTop.lookAt(new THREE.Vector3(0,0,0));
 
 //active camera
@@ -98,9 +101,12 @@ var floor_geo = new THREE.PlaneGeometry(100, 100);
 
 var car_geo = new THREE.BoxGeometry(1, 1, 1);
 
-var cheerio_geo = new THREE.TorusGeometry( 1, 0.5, 16, 60 );
+var cheerio_geo = new THREE.TorusGeometry( 1, 0.5, 16, 30 );
 
 var orange_geo = new THREE.SphereGeometry ( 1, 30, 30 );
+
+var checkpoint0and2_geo = new THREE.PlaneGeometry(21, 2);
+var checkpoint1and3_geo = new THREE.PlaneGeometry(2, 21);
 //var car_geo = geo_loader.load('js/models/spiked_ball.obj', function(){console.log("obj load started")});
 
 
@@ -160,6 +166,35 @@ var orange_mat = new THREE.MeshPhongMaterial({
   shininess  :  1000,
 });
 
+var life_mat = new THREE.MeshBasicMaterial({
+  color : 0x666666,
+  map: map
+});
+
+var map0and2 = tex_loader.load('js/textures/checkpoint.png');
+map0and2.wrapS = THREE.RepeatWrapping;
+map0and2.wrapT = THREE.RepeatWrapping;
+map0and2.repeat.set(4, 1);
+
+var map1and3 = tex_loader.load('js/textures/checkpoint.png');
+map1and3.wrapS = THREE.RepeatWrapping;
+map1and3.wrapT = THREE.RepeatWrapping;
+map1and3.repeat.set(1, 3);
+
+var checkpoint0and2_mat = new THREE.MeshPhongMaterial({
+  color        : 0x666666,
+  specular   :  0xffffff,
+  shininess  :  1000,
+  map	: 	map0and2
+});
+
+var checkpoint1and3_mat = new THREE.MeshPhongMaterial({
+  color        : 0x666666,
+  specular   :  0xffffff,
+  shininess  :  1000,
+  map	: 	map1and3
+});
+
 var debugMat = new THREE.MeshBasicMaterial({color: 0xff0000});
 
 // ----------[ Meshes ]----------\\
@@ -172,13 +207,30 @@ var car = new THREE.Mesh(car_geo, floor_mat);
 var wall = new THREE.Mesh(floor_geo, floor_mat);
 wall.position.set(0,50,-50.5);
 
+var checkPoint0 = new THREE.Mesh(checkpoint0and2_geo, checkpoint0and2_mat);
+checkPoint0.rotateX(-Math.PI / 2);
+checkPoint0.position.set(30, 0.01, 0);
+
+var checkPoint2 = new THREE.Mesh(checkpoint0and2_geo, checkpoint0and2_mat);
+checkPoint2.rotateX(-Math.PI / 2);
+checkPoint2.position.set(-30, 0.01, 0);
+
+var checkPoint1 = new THREE.Mesh(checkpoint1and3_geo, checkpoint1and3_mat);
+checkPoint1.rotateX(-Math.PI / 2);
+checkPoint1.position.set(0, 0.01, -30);
+
+var checkPoint3 = new THREE.Mesh(checkpoint1and3_geo, checkpoint1and3_mat);
+checkPoint3.rotateX(-Math.PI / 2);
+checkPoint3.position.set(0, 0.01, 30);
+
+
 // ----------[ Cheerios ]----------\\
 
 var cheerio = [ ];
 var cheerioSpeed = [ ];
 var cheerioDir = [ ];
 
-for(var i = 0; i< NUMBER_CHEERIOS ; i++) {
+for(var i = 0; i < NUMBER_CHEERIOS; i++) {
     cheerioDir[i] = new THREE.Vector3();
 }
 
@@ -189,9 +241,10 @@ const cheerioTraction = 0.003;
 const carInitPos = new THREE.Vector3(30, 0.5, 0);
 car.position.set(carInitPos.x, carInitPos.y, carInitPos.z);
 
-
 var carSpeed = 0;
-var carAngle = 0;
+const carInitAngle = -Math.PI / 2;
+var carAngle = carInitAngle;
+car.rotation.y = carInitAngle;
 var carWheelRotation = 0;
 const carAcc = 0.002;
 const carTraction = 0.001;
@@ -217,10 +270,35 @@ function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
 }
 
+// ----------[ Game Logic ]----------\\
 
+var lives = 5;
+var livesObj = [ ];
+var isGameOver = false;
+var isPaused = false;
+var score = 0;
+var currentCheckPoint = 0;
 
 
 // ----------[ Init ]----------\\
+
+function createHUD()
+{
+	hudScene = new THREE.Scene();
+	
+	for (var i = 0; i < lives; i++) {
+		livesObj[i] = new THREE.Mesh( car_geo.clone(), life_mat )
+		livesObj[i].scale.set(5, 5, 1);
+		livesObj[i].position.set(92-(i*8), 47, 0);
+		hudScene.add(livesObj[i]);
+	}
+
+	hudCamera = new THREE.OrthographicCamera(-window.innerWidth / 18, window.innerWidth / 18, window.innerHeight / 18, - window.innerHeight / 18, 0.1, 10000);
+	hudCamera.position.z = 10;
+	hudCamera.lookAt(hudScene.position);
+	
+	hudScene.add(hudCamera);
+}
 
 var init = function() {
 	scene = new THREE.Scene();
@@ -229,6 +307,7 @@ var init = function() {
     renderer = new THREE.WebGLRenderer({alpha : true});
     renderer.setClearColor(0x000000, 1.0);
     renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.autoClear = false;
 	document.body.appendChild( renderer.domElement );
 	
 	//Cameras
@@ -258,6 +337,11 @@ var init = function() {
     scene.add(mirror);
 
     scene.add(car);
+	createHUD();
+	scene.add(checkPoint0);
+	scene.add(checkPoint1);
+	scene.add(checkPoint2);
+	scene.add(checkPoint3);
 	
 	resetCheerios();
 	resetOranges();
@@ -274,9 +358,52 @@ var init = function() {
 
 };
 
+function detectCollision (obj1, obj2) {
+	var boundingBoxObj1 = new THREE.Box3().setFromObject(obj1);
+	var boundingBoxObj2 = new THREE.Box3().setFromObject(obj2);
+	
+	return boundingBoxObj1.intersectsBox(boundingBoxObj2);
+}
+
+function updateScore() {
+
+	switch (currentCheckPoint) {
+	case 0:  // if car's last checkpoint was starting line
+
+		if (detectCollision(car, checkPoint1)) {
+			currentCheckPoint++;
+		}
+
+		break;
+	case 1:
+
+		if (detectCollision(car, checkPoint2)) {
+			currentCheckPoint++;
+		}
+		
+		break;
+	case 2:
+
+		if (detectCollision(car, checkPoint3)) {
+			currentCheckPoint++;
+		}
+
+		break;
+	case 3:
+
+		if (detectCollision(car, checkPoint0)) {
+			currentCheckPoint = 0;
+			score++;
+		}
+
+		break;
+	}
+}
+
 function resetCheerios() {
 	var innerStep = 360 / NUMBER_INNER_CHEERIOS;
 	for (var i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
+		scene.remove(cheerio[i]);
 		cheerio[i] = new THREE.Mesh(cheerio_geo, cheerio_mat);
 		cheerio[i].rotateY(i*innerStep);
 		cheerio[i].translateX(20);
@@ -287,6 +414,7 @@ function resetCheerios() {
 
 	var outerStep = 360 / NUMBER_OUTER_CHEERIOS;
 	for (var i = NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
+		scene.remove(cheerio[i]);
 		cheerio[i] = new THREE.Mesh(cheerio_geo, cheerio_mat);
 		cheerio[i].rotateY(i*outerStep);
 		cheerio[i].translateX(40);
@@ -299,21 +427,39 @@ function resetCheerios() {
 
 function resetOranges() {
 	for (var i = 0; i < NUMBER_ORANGES; i++) {
+		scene.remove(orange[i]);
 		orange[i] = new THREE.Mesh(orange_geo, orange_mat);
 		orange[i].position.set(-50, 1, -30+(15*i));
 		scene.add(orange[i]);
 
 		orangeSpeed[i] = getRandomFloat(0.15, 0.45);
-		orangeAcceleration[i] = getRandomFloat(0.001, 0.007);
+		orangeAcceleration[i] = getRandomFloat(0.001, 0.004);
 	}
 }
 
-function detectCollision (obj1, obj2) {
-	var boundingBoxObj1 = new THREE.Box3().setFromObject(obj1);
-	var boundingBoxObj2 = new THREE.Box3().setFromObject(obj2);
-	
-	return boundingBoxObj1.intersectsBox(boundingBoxObj2);
+function resetCar() {
+	carSpeed = 0;
+	carAngle = carInitAngle;
+	car.rotation.y = carInitAngle;
+
+	car.position.set(carInitPos.x, carInitPos.y, carInitPos.z);
 }
+
+function carDie() {
+	hudScene.remove(livesObj[lives-1]);
+	if (lives > 1) {
+		lives--;
+		currentCheckPoint = 0;
+		resetCar();
+		resetOranges();
+	}
+	
+	else {
+		lives--;
+		isGameOver = true;
+	}
+}
+
 
 function animateCheerios() {
 	var aux = new THREE.Vector3();
@@ -352,6 +498,11 @@ function animateOranges() {
 
 	for (var i = 0; i < NUMBER_ORANGES; i++) {
 
+		if (detectCollision(car, orange[i])) {
+			carDie();
+		}
+
+
 
 		if (orange[i].position.x >= 100) { // respawn
 			orange[i].position.x = -50;
@@ -381,9 +532,11 @@ function animateOranges() {
 
 function animateCar() {
 	var aux = new THREE.Vector3();
-/*
+
+
 	if (car.position.x < -50 || car.position.x > 50 || car.position.z > 50 || car.position.z < -50)  // lose life if car is out of bounds
-		carDie();*/
+		carDie();
+
 
 	if (carForward) {
 		if (carSpeed >= 0)
@@ -415,7 +568,6 @@ function animateCar() {
 		carSpeed = -speedLimit;
 
 	
-	car.rotation.y = car.rotation.y % (2*Math.PI);
 	aux.setX(Math.cos(-carAngle) * carSpeed);
 	aux.setZ(Math.sin(-carAngle) * carSpeed);
 	car.position.add(aux);
@@ -455,51 +607,84 @@ function animateCar() {
 
 }
 
+function resetGame() {
+	isGameOver = false;
+	isPaused = false;
+	lives = 5;
+	score = 0;
+	currentCheckPoint = 0;
+	resetCar();
+	resetOranges();
+	resetCheerios();
+}
+
 var keyDown = function (event) {
 	//movement keys
-	if(event.key == 'w'){
+	if (event.keyCode == 87){ //w
 		carForward = true;
 	}
-	else if(event.key == 'a'){
+	
+	else if (event.keyCode == 65){ //a
 		carLeft = true;
 	}
-	else if(event.key == 's'){
+	
+	else if (event.keyCode == 83){ //s
 		carBackward = true;
 	}
-	else if(event.key == 'd'){
+	
+	else if (event.keyCode == 68){ //d
 		carRight = true;
 	}
+	
 	//camera switching
-	else if(event.key == '1'){
+	else if (event.key == '1'){
 		camera = camOrtho;
 	}
-	else if(event.key == '2'){
+	
+	else if (event.key == '2'){
 		camera = camTop;
 	}
-	else if(event.key == '3'){
+	
+	else if (event.key == '3'){
 		camera = camChase;
 	}
 };
 
 var keyUp = function (event) {
-	if(event.key == 'w'){
+	
+	if (event.keyCode == 87){ //w
 		carForward = false;
 	}
-	else if(event.key == 'a'){
+	
+	else if (event.keyCode == 65){ //a
 		carLeft = false;
 	}
-	else if(event.key == 's'){
+	
+	else if (event.keyCode == 83){ //s
 		carBackward = false;
 	}
-	else if(event.key == 'd'){
+	
+	else if (event.keyCode == 68){ //d
 		carRight = false;
 	}
+	
+	else if (event.keyCode == 80 && !isGameOver){ //p
+		isPaused = !isPaused;
+	}
+	
+	else if (event.keyCode == 82){ //r
+		resetGame();
+	}
+
 }
 
 var animate = function(){
-	animateCar();
-	animateCheerios();
-	animateOranges();
+	if (!isPaused && !isGameOver) {
+		animateCar();
+		updateScore();
+		animateCheerios();
+		animateOranges();
+	}
 };
 
 var resize = function() {
@@ -508,10 +693,10 @@ var resize = function() {
 	camChase.aspect = window.innerWidth/window.innerHeight;
 	camChase.updateProjectionMatrix();
 
-	camOrtho.left = window.innerWidth/-4;
-	camOrtho.right = window.innerWidth/4;
-	camOrtho.top = window.innerHeight/4;
-	camOrtho.bottom = window.innerHeight/-4;
+	camOrtho.left = window.innerWidth/-18;
+	camOrtho.right = window.innerWidth/18;
+	camOrtho.top = window.innerHeight/18;
+	camOrtho.bottom = window.innerHeight/-18;
 	camOrtho.updateProjectionMatrix();
 
 	camTop.aspect = window.innerWidth/window.innerHeight;
@@ -519,11 +704,12 @@ var resize = function() {
 };
 
 var render = function (){
+		renderer.clear();
 		renderer.render(scene, camera);
-	};
+		renderer.render(hudScene, hudCamera);
+};
 
 var renderScene = function() {
-
 	requestAnimationFrame(renderScene);
     controls.update();
     animate();
