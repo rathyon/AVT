@@ -551,6 +551,15 @@ function createHUD()
 	hudScene.add(hudCamera);
 }
 
+var handleTouchEvent = function(e) {
+	isPaused = !isPaused;
+}
+
+var onPhoneMove = function(e) {
+	camLeft.rotation.y = e.beta;
+	camRight.rotation.y = e.beta;
+}
+
 var init = function() {
 	scene = new THREE.Scene();
 	//scene.fog = new THREE.FogExp2(0xffffff, 0.02);
@@ -569,13 +578,17 @@ var init = function() {
 	scene.add(camTop);
 	car.add(camChase);
 	*/
+	
 	car.add(camLeft);
 	car.add(camRight);
-
+	document.addEventListener( 'deviceorientation', onPhoneMove, false );
+	
+	
 	// createStereo(aspect, fov, focus, realEyeSep)
 	createStereo((window.innerWidth/window.innerHeight) / 2, 45, 30, 0.064);
 
 	window.addEventListener('resize', resize);
+	window.addEventListener('touchend', handleTouchEvent, false);
 	
 	//Lights
 	/*
@@ -1060,7 +1073,7 @@ var keyUp = function (event) {
 
 
 function animate(){
-	//if (!isPaused && !isGameOver) {
+	if (!isPaused) {
 		//animateCar();
 		animateStereoDemo();
 		//updateScore();
@@ -1076,7 +1089,7 @@ function animate(){
 			}
 		}
 		*/
-	//}
+	}
 }
 
 function resize() {
@@ -1121,7 +1134,7 @@ function render(){
 	// comment the previous section and uncomment this to normal camera scheme
 	//renderer.render(scene, camera);
 
-	renderer.render(hudScene, hudCamera);
+	//renderer.render(hudScene, hudCamera);
 };
 
 function renderScene() {
