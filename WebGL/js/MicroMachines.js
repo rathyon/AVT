@@ -17,8 +17,11 @@ const NUMBER_CHEERIOS = NUMBER_INNER_CHEERIOS + NUMBER_OUTER_CHEERIOS;
 
 const NUMBER_ORANGES = 5;
 
+const PARTICLE_NUMBER = 50;
+
 const POINT_LIGHT_INTENSITY = 0.01;
 const POINT_LIGHT_COLOR = 0x1226AB;
+const particleAcc = [ 0.1, -0.15, 0 ];
 
 const axisX = new THREE.Vector3(1, 0, 0);
 const axisY = new THREE.Vector3(0, 1, 0);
@@ -145,6 +148,8 @@ var cheerio_geo = new THREE.TorusGeometry( 1, 0.5, 16, 30 );
 var orange_geo = new THREE.SphereGeometry ( 1, 30, 30 );
 */
 
+var particle_geo = new THREE.Geometry();
+
 var checkpoint0and2_geo = new THREE.PlaneGeometry(21, 2);
 var checkpoint1and3_geo = new THREE.PlaneGeometry(2, 21);
 
@@ -213,6 +218,9 @@ var car_mat = new THREE.MeshPhongMaterial({
 var life_mat = new THREE.MeshBasicMaterial({
   color : 0xcc0033,
 });
+
+var particle_map = tex_loader.load('js/textures/particle.png');
+var particle_mat = new THREE.PointsMaterial( { size:1.5, map: particle_map, transparent: true } );
 
 var billboard_map = tex_loader.load('js/textures/blue_flame.png');
 
@@ -364,8 +372,19 @@ var isPaused = false;
 var score = 0;
 var currentCheckPoint = 0;
 
+// ----------[ Particle System ]----------\\
+
+var particleSystem = new THREE.Points(particle_geo, particle_mat);
+var particleSpeed = [ ];
+var particleLife = [ ];
+var particleFade = [ ];
+var drawParticles = false;
+var deadParticles = 0;
+
+
 
 // ----------[ Init ]----------\\
+
 var camStereo = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
 camStereo.position.set(10, 10, 10);
 camStereo.lookAt(new THREE.Vector3(0,0,0));
@@ -417,6 +436,65 @@ function createStereo(aspect, fov, focus, realEyeSep){
 
 	camLeft.position.y = 0.3;
 	camRight.position.y = 0.3;
+
+}
+
+function spawnParticles() {
+	var v, phi, theta;
+	for (var i = 0 ; i < PARTICLE_NUMBER; i++) {
+		v = 0.3 * Math.random() + 0.2;
+		phi = Math.random() * Math.PI;
+		theta = 2 * Math.random() * Math.PI;
+		
+		var x = car.position.x;
+		var y = car.position.y + 1;
+		var z = car.position.z;
+		particleSystem.geometry.vertices[i] = new THREE.Vector3(x,y,z);
+		
+		particleSpeed[i] = new THREE.Vector3(v * Math.cos(theta), v * Math.cos(phi), v * Math.sin(theta) * Math.sin(phi));
+		
+		particleLife[i] = 1;
+		particleFade[i] = 0.01;
+	}
+}
+
+function iterateParticles()
+{
+	var i;
+	var h;
+
+	h = 0.125;
+	if (!isPaused) {
+		for (i = 0; i < PARTICLE_NUMBER; i++)
+		{
+
+			if (particleSystem.geometry.vertices[i].y < -5) {
+				particleLife[i] = 0;
+			}
+
+			else {
+				particleLife[i] -= particleFade[i];
+			}
+			
+			if (particleLife[i] > 0) {
+				particleSystem.geometry.vertices[i].x += h*particleSpeed[i].x;
+				particleSystem.geometry.vertices[i].y += h*particleSpeed[i].y;
+				particleSystem.geometry.vertices[i].z += h*particleSpeed[i].z;
+
+				particleSpeed[i].x += h*particleAcc[0];
+				particleSpeed[i].y += h*particleAcc[1];
+				particleSpeed[i].z += h*particleAcc[2];
+			}
+			
+			else
+				deadParticles++;
+				
+
+		}
+
+	}
+	
+	
 
 }
 
@@ -520,8 +598,8 @@ var init = function() {
 	scene.add(checkPoint3);
 	scene.add(billboard);
 	
-	resetCheerios();
-	resetOranges();
+	createCheerios();
+	createOranges();
 
 	//Mouse Controls
     controls = new THREE.OrbitControls( camera, renderer.domElement );
@@ -581,6 +659,25 @@ function resetCheerios() {
 	var innerStep = 2*Math.PI / NUMBER_INNER_CHEERIOS;
 	for (var i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
+		cheerio[i].rotation.y = (i*innerStep);
+		cheerio[i].translateX(10);
+		scene.add(cheerio[i]);
+	}
+
+	var outerStep = 2*Math.PI / NUMBER_OUTER_CHEERIOS;
+	for (var i = NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
+		scene.remove(cheerio[i]);
+		cheerio[i].rotation.y = (i*outerStep);
+		cheerio[i].translateX(20);
+		scene.add(cheerio[i]);
+	}
+	
+}
+
+function createCheerios() {
+	var innerStep = 2*Math.PI / NUMBER_INNER_CHEERIOS;
+	for (var i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
+		scene.remove(cheerio[i]);
 		cheerio[i] = new THREE.Object3D();
 		
 		(function(i){
@@ -626,8 +723,8 @@ function resetCheerios() {
 	
 }
 
-function resetOranges() {
-	for (var i = 0; i < NUMBER_ORANGES; i++) {
+function createOranges() {
+		for (var i = 0; i < NUMBER_ORANGES; i++) {
 		scene.remove(orange[i]);
 		orange[i] = new THREE.Object3D();
 		(function(i){
@@ -649,6 +746,16 @@ function resetOranges() {
 			});
 		})(i); 
 
+	}
+}
+
+function resetOranges() {
+	for (var i = 0; i < NUMBER_ORANGES; i++) {
+		scene.remove(orange[i]);
+		orange[i].position.set(-50, 1, -30+(15*i));
+		orangeSpeed[i] = getRandomFloat(0.1, 0.3);
+		orangeAcceleration[i] = getRandomFloat(0.001, 0.003);
+		scene.add(orange[i]);
 	}
 }
 
@@ -681,6 +788,9 @@ function animateCheerios() {
 	for (var i = 0; i < NUMBER_CHEERIOS; i++) {
 
 		if (detectCollision(car, cheerio[i])) {
+			drawParticles = true;
+			spawnParticles();
+			scene.add(particleSystem);
 
 			if (carSpeed >= 0) {
 				cheerioSpeed[i] = carSpeed;
@@ -905,16 +1015,25 @@ var keyUp = function (event) {
 
 };
 
-var animate = function(){
+function animate(){
 	if (!isPaused && !isGameOver) {
 		animateCar();
 		updateScore();
 		animateCheerios();
 		animateOranges();
+		if(drawParticles) {
+			iterateParticles();
+			particleSystem.geometry.verticesNeedUpdate = true;
+			if (deadParticles >= PARTICLE_NUMBER) {
+				drawParticles = false;
+				deadParticles = 0;
+				scene.remove(particleSystem);
+			}
+		}
 	}
-};
+}
 
-var resize = function() {
+function resize() {
 	renderer.setSize(window.innerWidth, window.innerHeight);
 
 	camChase.aspect = window.innerWidth/window.innerHeight;
@@ -931,12 +1050,12 @@ var resize = function() {
 
 	// createStereo(aspect, fov, focus, realEyeSep)
 	createStereo((window.innerWidth/window.innerHeight) / 2, 45, 30, 0.064);
-};
+}
 
-var render = function (){
+function render(){
 	renderer.clear();
 
-	/**/
+	/** /
 	var size = renderer.getSize();
 
 	renderer.setScissorTest( true );
@@ -954,12 +1073,12 @@ var render = function (){
 	/**/
 
 	// comment the previous section and uncomment this to normal camera scheme
-	// renderer.render(scene, camera);
+	renderer.render(scene, camera);
 
 	renderer.render(hudScene, hudCamera);
 };
 
-var renderScene = function() {
+function renderScene() {
 	requestAnimationFrame(renderScene);
     controls.update();
     animate();
