@@ -198,13 +198,13 @@ var shaderMat = new THREE.ShaderMaterial({
 });
 
 var cheerio_mat = new THREE.MeshPhongMaterial({
-  color        : 0x666666,
+  color        : 0x3333EE,
   specular   :  0xffffff,
   shininess  :  1000,
 });
 
 var orange_mat = new THREE.MeshPhongMaterial({
-  color        : 0x666666,
+  color        : 0xFFFF66,
   specular   :  0xffffff,
   shininess  :  1000,
 });
@@ -659,16 +659,18 @@ function resetCheerios() {
 	var innerStep = 2*Math.PI / NUMBER_INNER_CHEERIOS;
 	for (var i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
-		cheerio[i].rotation.y = (i*innerStep);
-		cheerio[i].translateX(10);
+		cheerioSpeed[i] = 0;
+		cheerio[i].position.set(0, 0, 0);
+		cheerio[i].translateX(20);
 		scene.add(cheerio[i]);
 	}
 
 	var outerStep = 2*Math.PI / NUMBER_OUTER_CHEERIOS;
 	for (var i = NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
-		cheerio[i].rotation.y = (i*outerStep);
-		cheerio[i].translateX(20);
+		cheerioSpeed[i] = 0;
+		cheerio[i].position.set(0, 0, 0);
+		cheerio[i].translateX(40);
 		scene.add(cheerio[i]);
 	}
 	
