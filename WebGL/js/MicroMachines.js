@@ -564,9 +564,11 @@ var init = function() {
 	document.body.appendChild( renderer.domElement );
 	
 	//Cameras
+	/*
 	scene.add(camOrtho);
 	scene.add(camTop);
 	car.add(camChase);
+	*/
 	car.add(camLeft);
 	car.add(camRight);
 
@@ -605,11 +607,11 @@ var init = function() {
     //scene.add(mirror);
 	
     scene.add(car);
-	createHUD();
-	scene.add(checkPoint0);
-	scene.add(checkPoint1);
-	scene.add(checkPoint2);
-	scene.add(checkPoint3);
+	//createHUD();
+	//scene.add(checkPoint0);
+	//scene.add(checkPoint1);
+	//scene.add(checkPoint2);
+	//scene.add(checkPoint3);
 	scene.add(billboard);
 	
 	createCheerios();
@@ -977,7 +979,7 @@ function resetGame() {
 	resetCheerios();
 }
 
-/*
+
 var keyDown = function (event) {
 	//movement keys
 	switch (event.keyCode) {
@@ -1055,16 +1057,16 @@ var keyUp = function (event) {
 	}
 
 };
-*/
+
 
 function animate(){
-	if (!isPaused && !isGameOver) {
+	//if (!isPaused && !isGameOver) {
 		//animateCar();
 		animateStereoDemo();
-		updateScore();
-		animateCheerios();
+		//updateScore();
+		//animateCheerios();
 		//animateOranges();
-		if(drawParticles) {
+		/*if(drawParticles) {
 			iterateParticles();
 			particleSystem.geometry.verticesNeedUpdate = true;
 			if (deadParticles >= PARTICLE_NUMBER) {
@@ -1073,7 +1075,8 @@ function animate(){
 				scene.remove(particleSystem);
 			}
 		}
-	}
+		*/
+	//}
 }
 
 function resize() {
