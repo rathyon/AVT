@@ -39,9 +39,9 @@ camTop.lookAt(new THREE.Vector3(0,0,0));
 //active camera
 var camera = camChase;
 
-// ----------[ Diretional Light ]----------\\
+// ----------[ Directional Light ]----------\\
 
-var directional_light = new THREE.DirectionalLight(0xffffff, 1.5);
+var directional_light = new THREE.DirectionalLight(0xFFFACD, 2);
 directional_light.position.set(0, 100, 70);
 
 // ----------[ Point Lights ]----------\\
@@ -61,17 +61,6 @@ light2.shadow.mapSize.width = 2048;
 light2.shadow.mapSize.height = 2048;
 light2.shadow.camera.near = 0.5;
 light2.shadow.camera.far = 500;
-
-//wtf is wrong with the spotlight ?!?!
-var spotlight = new THREE.SpotLight(0xffffff);
-spotlight.position.set(0,5, 5);
-spotlight.castShadow = true;
-
-//Set up shadow properties for the spotlight
-spotlight.shadow.mapSize.width = 512;  // default
-spotlight.shadow.mapSize.height = 512; // default
-spotlight.shadow.camera.near = 0.5;       // default
-spotlight.shadow.camera.far = 500;     // default
 
 // ----------[ Lens Flare ]----------\\
 
@@ -176,11 +165,12 @@ var orange_mat = new THREE.MeshPhongMaterial({
 
 var car_mat = new THREE.MeshPhongMaterial({
   color : 0xcc0033,
+  specular   :  0xffffff,
+  shininess  :  1000,
 });
 
 var life_mat = new THREE.MeshBasicMaterial({
-  color : 0x666666,
-  map: map
+  color : 0xcc0033,
 });
 
 var map0and2 = tex_loader.load('js/textures/checkpoint.png');
@@ -215,15 +205,18 @@ var floor = new THREE.Mesh(floor_geo, floor_mat);
 floor.receiveShadow = true;
 
 var car = new THREE.Object3D();
+
 geo_loader.load('js/models/car.obj', function(object){
-		object.traverse(function(child){
-			if(child instanceof THREE.Mesh){
-				car.add(child);
+		object.traverse( function ( child ) {
+			if ( child instanceof THREE.Mesh ) {
 				child.material = car_mat;
 				child.castShadow = true;
-			}
-		});
-	});
+            }
+        } );
+		
+		car.add(object);
+});
+
 car.scale.set(2,2,2);
 
 var wall = new THREE.Mesh(floor_geo, floor_mat);
@@ -282,11 +275,25 @@ var carRight = false;
 
 var wheelTurn = 0;
 
+// ----------[ Spotlight ]----------\\
+
+var spotlight = new THREE.SpotLight(0xffffff, 10, 60, Math.PI / 4);
+spotlight.position.set(car.position.x, 0, car.position.z);
+//spotlight.castShadow = true;
+
+//Set up shadow properties for the spotlight
+spotlight.shadow.mapSize.width = 512;  // default
+spotlight.shadow.mapSize.height = 512; // default
+spotlight.shadow.camera.near = 20;       // default
+spotlight.shadow.camera.far = 500;     // default
+spotlight.shadow.camera.fov = 45;
+
 // ----------[ Oranges ]----------\\
 
 var orange = [ ];
 var orangeSpeed = [ ];
 var orangeAcceleration = [ ];
+const orangeRotationFactor = 0.2;
 
 function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
@@ -310,18 +317,22 @@ function createHUD()
 	
 	for (var i = 0; i < lives; i++) {
 		livesObj[i] = new THREE.Object3D();
-		geo_loader.load('js/models/car.obj', function(object){
-			object.traverse(function(child){
+		(function(i){
+			geo_loader.load('js/models/car.obj', function(object){
+			
+				object.traverse(function(child){
 				if(child instanceof THREE.Mesh){
-					livesObj[i].add(child);
 					child.material = life_mat;
-					child.castShadow = true;
 				}
+				
+				livesObj[i] = object;
+				livesObj[i].scale.set(5, 5, 1);
+				livesObj[i].position.set(92, 36 - (5*i), 0);
+				hudScene.add(livesObj[i]);
+				
+				});
 			});
-		});
-		livesObj[i].scale.set(5, 5, 1);
-		livesObj[i].position.set(92-(i*8), 47, 0);
-		hudScene.add(livesObj[i]);
+		})(i); 
 	}
 
 	hudCamera = new THREE.OrthographicCamera(-window.innerWidth / 18, window.innerWidth / 18, window.innerHeight / 18, - window.innerHeight / 18, 0.1, 10000);
@@ -353,11 +364,13 @@ var init = function() {
 	//Lights
 	scene.add(light1);
 	scene.add(light2);
-	car.add(spotlight);
-	spotlight.visible = false;
+	light1.visible = false;
+	light2.visible = false;
+	//scene.add( spotlight );
+	//scene.add( spotlight.target );
 	scene.add( lensFlare );
 
-	//scene.add(directional_light);
+	scene.add(directional_light);
 
 	//Axis Helper
     scene.add(new THREE.AxesHelper(10));
@@ -437,25 +450,47 @@ function resetCheerios() {
 	var innerStep = 360 / NUMBER_INNER_CHEERIOS;
 	for (var i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
-		cheerio[i] = new THREE.Mesh(cheerio_geo, cheerio_mat);
-		cheerio[i].rotateY(i*innerStep);
-		cheerio[i].translateX(20);
-		cheerio[i].rotateX(Math.PI / 2);
-		cheerio[i].position.y += 0.5;
-		cheerio[i].castShadow = true;
-		scene.add(cheerio[i]);
+		cheerio[i] = new THREE.Object3D();
+		
+		(function(i){
+			geo_loader.load('js/models/obstacle.obj', function(object){
+				
+			object.traverse(function(child){
+				if(child instanceof THREE.Mesh) {
+					child.material = cheerio_mat;
+				}
+				
+				cheerio[i] = object;
+				cheerio[i].rotation.y = (THREE.Math.degToRad(i*innerStep));
+				cheerio[i].translateX(10);
+				//cheerio[i].castShadow = true;
+				scene.add(cheerio[i]);
+				});
+			});
+		})(i); 
 	}
 
 	var outerStep = 360 / NUMBER_OUTER_CHEERIOS;
 	for (var i = NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
-		cheerio[i] = new THREE.Mesh(cheerio_geo, cheerio_mat);
-		cheerio[i].rotateY(i*outerStep);
-		cheerio[i].translateX(40);
-		cheerio[i].rotateX(Math.PI / 2);
-		cheerio[i].position.y += 0.5;
-		cheerio[i].castShadow = true;
-		scene.add(cheerio[i]);
+		cheerio[i] = new THREE.Object3D();
+		
+		(function(i){
+			geo_loader.load('js/models/obstacle.obj', function(object){
+				
+			object.traverse(function(child){
+				if(child instanceof THREE.Mesh) {
+					child.material = cheerio_mat;
+				}
+				
+				cheerio[i] = object;
+				cheerio[i].rotation.y = (THREE.Math.degToRad(i*outerStep));
+				cheerio[i].translateX(20);
+				cheerio[i].castShadow = true;
+				scene.add(cheerio[i]);
+				});
+			});
+		})(i); 
 	}
 	
 }
@@ -463,13 +498,26 @@ function resetCheerios() {
 function resetOranges() {
 	for (var i = 0; i < NUMBER_ORANGES; i++) {
 		scene.remove(orange[i]);
-		orange[i] = new THREE.Mesh(orange_geo, orange_mat);
-		orange[i].position.set(-50, 1, -30+(15*i));
-		scene.add(orange[i]);
-		orange[i].castShadow = true;
+		orange[i] = new THREE.Object3D();
+		(function(i){
+			geo_loader.load('js/models/spiked_ball.obj', function(object){
+				
+				object.traverse(function(child){
+				if(child instanceof THREE.Mesh) {
+					child.material = orange_mat;
+				}
+				
+				orange[i] = object;
+				orange[i].position.set(-50, 1, -30+(15*i));
+				orange[i].castShadow = true;
+				scene.add(orange[i]);
+				orangeSpeed[i] = getRandomFloat(0.1, 0.3);
+				orangeAcceleration[i] = getRandomFloat(0.001, 0.003);
+				
+				});
+			});
+		})(i); 
 
-		orangeSpeed[i] = getRandomFloat(0.15, 0.45);
-		orangeAcceleration[i] = getRandomFloat(0.001, 0.004);
 	}
 }
 
@@ -558,7 +606,7 @@ function animateOranges() {
 		else { // normal movement
 			orangeSpeed[i] += orangeAcceleration[i];
 			orange[i].position.x += orangeSpeed[i];
-			orange[i].rotation.z += orangeSpeed[i];
+			orange[i].rotation.z += -orangeSpeed[i] * orangeRotationFactor;
 			orange[i].rotation.z = orange[i].rotation.z % (Math.PI * 2);
 		}
 
@@ -569,9 +617,9 @@ function animateOranges() {
 function animateCar() {
 	var aux = new THREE.Vector3();
 
-
 	if (car.position.x < -50 || car.position.x > 50 || car.position.z > 50 || car.position.z < -50)  // lose life if car is out of bounds
 		carDie();
+	
 
 
 	if (carForward) {
@@ -603,11 +651,14 @@ function animateCar() {
 	else if (carSpeed < -speedLimit)
 		carSpeed = -speedLimit;
 
+	var cosCarAngle = Math.cos(-carAngle);
+	var sinCarAngle = Math.sin(-carAngle);
 	
-	aux.setX(Math.cos(-carAngle) * carSpeed);
-	aux.setZ(Math.sin(-carAngle) * carSpeed);
+	aux.setX(cosCarAngle * carSpeed);
+	aux.setZ(sinCarAngle  * carSpeed);
 	car.position.add(aux);
-	
+	//spotlight.position.set(car.position.x, 1, car.position.z);
+	//spotlight.target.position.set(0, 0, 0);
 	
 	if (carLeft && !carRight) {
 		wheelTurn = 1;
