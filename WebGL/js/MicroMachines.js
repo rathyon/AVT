@@ -65,6 +65,7 @@ light2.shadow.mapSize.height = 2048;
 light2.shadow.camera.near = 0.1;
 light2.shadow.camera.far = 5000;
 
+/*
 var light3 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
 light3.position.set(40, 10, -40);
 light3.castShadow = true;
@@ -96,8 +97,9 @@ light6.shadow.mapSize.width = 2048;
 light6.shadow.mapSize.height = 2048;
 light6.shadow.camera.near = 0.1;
 light6.shadow.camera.far = 5000;
+*/
 
-var pointLights = [ light1, light2, light3, light4, light5, light6 ];
+var pointLights = [ light1, light2 ];
 
 // ----------[ Lens Flare ]----------\\
 
@@ -386,6 +388,16 @@ function createHUD()
 			});
 		})(i); 
 	}
+	
+	var hudCanvas = document.createElement('canvas');
+	hudCanvas.width = window.innerWidth;
+	hudCanvas.height = window.innerHeight;
+
+	var hudBitmap = hudCanvas.getContext('2d');
+	hudBitmap.font = "Normal 40px Arial";
+	hudBitmap.textAlign = 'center';
+	hudBitmap.fillStyle = "rgba(245,245,245,0.75)";
+	hudBitmap.fillText('Initializing...', window.innerWidth / 2, window.innerWidth / 2);
 
 	hudCamera = new THREE.OrthographicCamera(-window.innerWidth / 18, window.innerWidth / 18, window.innerHeight / 18, - window.innerHeight / 18, 0.1, 1000);
 	hudCamera.position.z = 10;
@@ -735,20 +747,12 @@ function animateCar() {
 			car.rotation.y += carAngularSpeed;
 			carAngle += carAngularSpeed;
 			carAngle = carAngle % (2*Math.PI);
-			//alpha += carAngularSpeed;
-			//alpha = fmod(alpha, 360.0f);
-			//if (tracking != 1)
-				//updateCamera();
 		}
 
 		else if (carRight && !carLeft && carSpeed > 0 || (carLeft && !carRight && carSpeed < 0)) {
 			car.rotation.y -= carAngularSpeed;
 			carAngle -= carAngularSpeed;
 			carAngle = carAngle % (2*Math.PI);
-			//alpha -= carAngularSpeed;
-			//alpha = fmod(alpha, 360.0f);
-			//if (tracking != 1)
-				//updateCamera();
 		}
 	}
 
