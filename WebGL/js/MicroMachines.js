@@ -589,7 +589,6 @@ var init = function() {
     //lay down horizontally
     floor.rotateX(-Math.PI/2);
     scene.add(mirror);
-	mirror.visible = true;
 	
     scene.add(car);
 	createHUD();
