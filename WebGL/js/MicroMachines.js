@@ -52,18 +52,18 @@ directional_light.position.set(0, 100, 70);
 var light1 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
 light1.position.set(-40, 10, -40);
 light1.castShadow = true;
-light1.shadow.mapSize.width = 2048;
-light1.shadow.mapSize.height = 2048;
+light1.shadow.mapSize.width = 256;
+light1.shadow.mapSize.height = 256;
 light1.shadow.camera.near = 0.1;
-light1.shadow.camera.far = 5000;
+light1.shadow.camera.far = 200;
 
 var light2 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
 light2.position.set(-40, 10, 40);
 light2.castShadow = true;
-light2.shadow.mapSize.width = 2048;
-light2.shadow.mapSize.height = 2048;
+light2.shadow.mapSize.width = 256;
+light2.shadow.mapSize.height = 256;
 light2.shadow.camera.near = 0.1;
-light2.shadow.camera.far = 5000;
+light2.shadow.camera.far = 200;
 
 /*
 var light3 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
@@ -137,11 +137,13 @@ var geo_loader = new THREE.OBJLoader();
 
 var floor_geo = new THREE.PlaneGeometry(100, 100);
 
+/*
 var car_geo = new THREE.BoxGeometry(1, 1, 1);
 
 var cheerio_geo = new THREE.TorusGeometry( 1, 0.5, 16, 30 );
 
 var orange_geo = new THREE.SphereGeometry ( 1, 30, 30 );
+*/
 
 var checkpoint0and2_geo = new THREE.PlaneGeometry(21, 2);
 var checkpoint1and3_geo = new THREE.PlaneGeometry(2, 21);
@@ -336,10 +338,10 @@ spotlight.position.set(car.position.x, 0, car.position.z);
 spotlight.castShadow = true;
 
 //Set up shadow properties for the spotlight
-spotlight.shadow.mapSize.width = 512;  // default
-spotlight.shadow.mapSize.height = 512; // default
+spotlight.shadow.mapSize.width = 128;  // default
+spotlight.shadow.mapSize.height = 128; // default
 spotlight.shadow.camera.near = 20;       // default
-spotlight.shadow.camera.far = 500;     // default
+spotlight.shadow.camera.far = 300;     // default
 spotlight.shadow.camera.fov = 45;
 
 // ----------[ Oranges ]----------\\
@@ -502,11 +504,11 @@ var init = function() {
     scene.add(wall2);
     scene.add(wall3);
     scene.add(wall4);
-    wall2.rotateY(THREE.Math.degToRad(180));
-    wall3.rotateY(THREE.Math.degToRad(-90));
-    wall4.rotateY(THREE.Math.degToRad(90));
+    wall2.rotateY(Math.PI);
+    wall3.rotateY(-Math.PI/2);
+    wall4.rotateY(Math.PI/2);
     //lay down horizontally
-    floor.rotateX(THREE.Math.degToRad(-90));
+    floor.rotateX(-Math.PI/2);
     scene.add(mirror);
 	mirror.visible = true;
 	
@@ -576,7 +578,7 @@ function updateScore() {
 }
 
 function resetCheerios() {
-	var innerStep = 360 / NUMBER_INNER_CHEERIOS;
+	var innerStep = 2*Math.PI / NUMBER_INNER_CHEERIOS;
 	for (var i = 0; i < NUMBER_INNER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
 		cheerio[i] = new THREE.Object3D();
@@ -590,7 +592,7 @@ function resetCheerios() {
 				}
 				
 				cheerio[i] = object;
-				cheerio[i].rotation.y = (THREE.Math.degToRad(i*innerStep));
+				cheerio[i].rotation.y = (i*innerStep);
 				cheerio[i].translateX(10);
 				//cheerio[i].castShadow = true;
 				scene.add(cheerio[i]);
@@ -599,7 +601,7 @@ function resetCheerios() {
 		})(i); 
 	}
 
-	var outerStep = 360 / NUMBER_OUTER_CHEERIOS;
+	var outerStep = 2*Math.PI / NUMBER_OUTER_CHEERIOS;
 	for (var i = NUMBER_INNER_CHEERIOS; i < NUMBER_CHEERIOS; i++) {
 		scene.remove(cheerio[i]);
 		cheerio[i] = new THREE.Object3D();
@@ -613,7 +615,7 @@ function resetCheerios() {
 				}
 				
 				cheerio[i] = object;
-				cheerio[i].rotation.y = (THREE.Math.degToRad(i*outerStep));
+				cheerio[i].rotation.y = (i*outerStep);
 				cheerio[i].translateX(20);
 				cheerio[i].castShadow = true;
 				scene.add(cheerio[i]);
@@ -908,7 +910,7 @@ var animate = function(){
 		animateCar();
 		updateScore();
 		animateCheerios();
-		//animateOranges();
+		animateOranges();
 	}
 };
 
