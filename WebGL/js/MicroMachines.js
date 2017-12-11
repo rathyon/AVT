@@ -17,6 +17,9 @@ const NUMBER_CHEERIOS = NUMBER_INNER_CHEERIOS + NUMBER_OUTER_CHEERIOS;
 
 const NUMBER_ORANGES = 5;
 
+const POINT_LIGHT_INTENSITY = 0.01;
+const POINT_LIGHT_COLOR = 0x1226AB;
+
 const axisX = new THREE.Vector3(1, 0, 0);
 const axisY = new THREE.Vector3(0, 1, 0);
 const axisZ = new THREE.Vector3(0, 0, 1);
@@ -46,21 +49,55 @@ directional_light.position.set(0, 100, 70);
 
 // ----------[ Point Lights ]----------\\
 
-var light1 = new THREE.PointLight( 0x00ffff, 0.5);
-light1.position.set(200, 50, 0);
+var light1 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
+light1.position.set(-40, 10, -40);
 light1.castShadow = true;
 light1.shadow.mapSize.width = 2048;
 light1.shadow.mapSize.height = 2048;
 light1.shadow.camera.near = 0.1;
 light1.shadow.camera.far = 5000;
 
-var light2 = new THREE.PointLight( 0xffcc66, 2);
-light2.position.set(-200, 50, 0);
+var light2 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
+light2.position.set(-40, 10, 40);
 light2.castShadow = true;
 light2.shadow.mapSize.width = 2048;
 light2.shadow.mapSize.height = 2048;
 light2.shadow.camera.near = 0.1;
 light2.shadow.camera.far = 5000;
+
+var light3 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
+light3.position.set(40, 10, -40);
+light3.castShadow = true;
+light3.shadow.mapSize.width = 2048;
+light3.shadow.mapSize.height = 2048;
+light3.shadow.camera.near = 0.1;
+light3.shadow.camera.far = 5000;
+
+var light4 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
+light4.position.set(40, 10, 40);
+light4.castShadow = true;
+light4.shadow.mapSize.width = 2048;
+light4.shadow.mapSize.height = 2048;
+light4.shadow.camera.near = 0.1;
+light4.shadow.camera.far = 5000;
+
+var light5 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
+light5.position.set(30, 10, 0);
+light5.castShadow = true;
+light5.shadow.mapSize.width = 2048;
+light5.shadow.mapSize.height = 2048;
+light5.shadow.camera.near = 0.1;
+light5.shadow.camera.far = 5000;
+
+var light6 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
+light6.position.set(-30, 10, 0);
+light6.castShadow = true;
+light6.shadow.mapSize.width = 2048;
+light6.shadow.mapSize.height = 2048;
+light6.shadow.camera.near = 0.1;
+light6.shadow.camera.far = 5000;
+
+var pointLights = [ light1, light2, light3, light4, light5, light6 ];
 
 // ----------[ Lens Flare ]----------\\
 
@@ -175,7 +212,7 @@ var life_mat = new THREE.MeshBasicMaterial({
 
 var billboard_map = tex_loader.load('js/textures/blue_flame.png');
 
-var billboard_mat = new THREE.SpriteMaterial({ map: billboard_map, color: 0xffffff });
+var billboard_mat = new THREE.SpriteMaterial({ map: billboard_map, color: 0xffffff, side : THREE.FrontSide });
 
 var map0and2 = tex_loader.load('js/textures/checkpoint.png');
 map0and2.wrapS = THREE.RepeatWrapping;
@@ -292,9 +329,9 @@ var wheelTurn = 0;
 
 // ----------[ Spotlight ]----------\\
 
-var spotlight = new THREE.SpotLight(0xffffff, 10, 60, Math.PI / 4);
+var spotlight = new THREE.SpotLight(0xfeffa1, 1.5, 20, Math.PI / 4);
 spotlight.position.set(car.position.x, 0, car.position.z);
-//spotlight.castShadow = true;
+spotlight.castShadow = true;
 
 //Set up shadow properties for the spotlight
 spotlight.shadow.mapSize.width = 512;  // default
@@ -350,7 +387,7 @@ function createHUD()
 		})(i); 
 	}
 
-	hudCamera = new THREE.OrthographicCamera(-window.innerWidth / 18, window.innerWidth / 18, window.innerHeight / 18, - window.innerHeight / 18, 0.1, 10000);
+	hudCamera = new THREE.OrthographicCamera(-window.innerWidth / 18, window.innerWidth / 18, window.innerHeight / 18, - window.innerHeight / 18, 0.1, 1000);
 	hudCamera.position.z = 10;
 	hudCamera.lookAt(hudScene.position);
 	
@@ -377,12 +414,12 @@ var init = function() {
 	window.addEventListener('resize', resize);
 	
 	//Lights
-	scene.add(light1);
-	scene.add(light2);
-	light1.visible = false;
-	light2.visible = false;
-	//scene.add( spotlight );
-	//scene.add( spotlight.target );
+	for (var i = 0; i < pointLights.length ; i++) {
+		scene.add(pointLights[i]);
+	}
+	
+	scene.add( spotlight );
+	scene.add( spotlight.target );
 	scene.add( lensFlare );
 
 	scene.add(directional_light);
@@ -402,7 +439,8 @@ var init = function() {
     //lay down horizontally
     floor.rotateX(THREE.Math.degToRad(-90));
     scene.add(mirror);
-
+	mirror.visible = true;
+	
     scene.add(car);
 	createHUD();
 	scene.add(checkPoint0);
@@ -679,8 +717,8 @@ function animateCar() {
 	aux.setX(cosCarAngle * carSpeed);
 	aux.setZ(sinCarAngle  * carSpeed);
 	car.position.add(aux);
-	//spotlight.position.set(car.position.x, 1, car.position.z);
-	//spotlight.target.position.set(0, 0, 0);
+	spotlight.position.set(car.position.x + 1.6*cosCarAngle, 1, car.position.z + 1.6*sinCarAngle);
+	spotlight.target.position.set(car.position.x + 3*cosCarAngle, 0, car.position.z + 3*sinCarAngle);
 	
 	if (carLeft && !carRight) {
 		wheelTurn = 1;
@@ -729,63 +767,80 @@ function resetGame() {
 
 var keyDown = function (event) {
 	//movement keys
-	if (event.keyCode == 87){ //w
-		carForward = true;
-	}
-	
-	else if (event.keyCode == 65){ //a
-		carLeft = true;
-	}
-	
-	else if (event.keyCode == 83){ //s
-		carBackward = true;
-	}
-	
-	else if (event.keyCode == 68){ //d
-		carRight = true;
-	}
-	
-	//camera switching
-	else if (event.key == '1'){
-		camera = camOrtho;
-	}
-	
-	else if (event.key == '2'){
-		camera = camTop;
-	}
-	
-	else if (event.key == '3'){
-		camera = camChase;
+	switch (event.keyCode) {
+		case 87:
+			carForward = true;
+			break;
+		case 65:
+			carLeft = true;
+			break;
+		case 83:
+			carBackward = true;
+			break;
+		case 68:
+			carRight = true;
+			break;
+		case 49:
+			camera = camOrtho;
+			break;
+		case 50:
+			camera = camTop;
+			break;
+		case 51:
+			camera = camChase;
+			break;
 	}
 };
 
 var keyUp = function (event) {
 	
-	if (event.keyCode == 87){ //w
-		carForward = false;
-	}
-	
-	else if (event.keyCode == 65){ //a
-		carLeft = false;
-	}
-	
-	else if (event.keyCode == 83){ //s
-		carBackward = false;
-	}
-	
-	else if (event.keyCode == 68){ //d
-		carRight = false;
-	}
-	
-	else if (event.keyCode == 80 && !isGameOver){ //p
-		isPaused = !isPaused;
-	}
-	
-	else if (event.keyCode == 82){ //r
-		resetGame();
+	switch (event.keyCode) {
+		case 87:
+			carForward = false;
+			break;
+		case 65:
+			carLeft = false;
+			break;
+		case 83:
+			carBackward = false;
+			break;
+		case 68:
+			carRight = false;
+			break;
+		case 80: //p
+			if (!isGameOver) {
+				isPaused = !isPaused;
+			}
+			break;
+		case 82: //r
+			resetGame();
+			break;
+		case 72: //h
+			if (spotlight.intensity > 0)
+				spotlight.intensity = 0;
+			else
+				spotlight.intensity = 1.5;
+			break;
+		case 78: //n
+			if (directional_light.intensity > 0)
+				directional_light.intensity = 0;
+			else
+				directional_light.intensity = 2;
+			break;
+		case 67: //c
+			for (var i = 0; i < pointLights.length; i++) {
+				if (pointLights[i].intensity > 0)
+					pointLights[i].intensity = 0;
+				else
+					pointLights[i].intensity = POINT_LIGHT_INTENSITY;
+			}
+			break;
+		case 77: //m
+			mirror.visible = !mirror.visible;
+			break;
 	}
 
-}
+};
 
 var animate = function(){
 	if (!isPaused && !isGameOver) {
