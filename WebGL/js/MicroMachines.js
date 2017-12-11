@@ -19,8 +19,11 @@ const NUMBER_ORANGES = 5;
 
 const PARTICLE_NUMBER = 50;
 
+
 const POINT_LIGHT_INTENSITY = 0.01;
 const POINT_LIGHT_COLOR = 0x1226AB;
+
+
 const particleAcc = [ 0.1, -0.15, 0 ];
 
 const axisX = new THREE.Vector3(1, 0, 0);
@@ -29,6 +32,7 @@ const axisZ = new THREE.Vector3(0, 0, 1);
 
 
 // ----------[ Camera ]----------\\
+
 
 var camChase = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
 camChase.position.set(-25, 10, 0);
@@ -45,12 +49,14 @@ camTop.lookAt(new THREE.Vector3(0,0,0));
 //active camera
 var camera = camChase;
 
+
 // ----------[ Directional Light ]----------\\
 
 var directional_light = new THREE.DirectionalLight(0xFFFACD, 2);
 directional_light.position.set(0, 100, 70);
 
 // ----------[ Point Lights ]----------\\
+
 
 var light1 = new THREE.PointLight( POINT_LIGHT_COLOR, POINT_LIGHT_INTENSITY);
 light1.position.set(-40, 10, -40);
@@ -106,6 +112,7 @@ var pointLights = [ light1, light2 ];
 
 // ----------[ Lens Flare ]----------\\
 
+
 var sourcelight = tex_loader.load('js/textures/sourcelight.png');
 var hexagon = tex_loader.load('js/textures/hexagon.png');
 var ring = tex_loader.load('js/textures/ring.png');
@@ -124,6 +131,7 @@ lensFlare.add(hexagon, 90, 0.9, THREE.AdditiveBlending, flareColor);
 
 // ----------[ Mirror ]----------\\
 
+
 var mirror = new THREE.Reflector( 70, 35, {
 	clipBias: 0.003,
 	textureWidth: window.innerWidth * window.devicePixelRatio,
@@ -133,6 +141,7 @@ var mirror = new THREE.Reflector( 70, 35, {
 } );
 
 mirror.position.set(0, 17.5, -49.5);
+
 
 // ----------[ Geometry ]----------\\
 
@@ -255,7 +264,8 @@ var debugMat = new THREE.MeshBasicMaterial({color: 0xff0000});
 // ----------[ Meshes ]----------\\
 
 var floor = new THREE.Mesh(floor_geo, floor_mat);
-floor.receiveShadow = true;
+//floor.receiveShadow = true;
+floor.receiveShadow = false;
 
 var car = new THREE.Object3D();
 
@@ -263,7 +273,7 @@ geo_loader.load('js/models/car.obj', function(object){
 		object.traverse( function ( child ) {
 			if ( child instanceof THREE.Mesh ) {
 				child.material = car_mat;
-				child.castShadow = true;
+				//child.castShadow = true;
             }
         } );
 		
@@ -343,7 +353,7 @@ var wheelTurn = 0;
 
 var spotlight = new THREE.SpotLight(0xfeffa1, 1.5, 20, Math.PI / 4);
 spotlight.position.set(car.position.x, 0, car.position.z);
-spotlight.castShadow = true;
+//spotlight.castShadow = true;
 
 //Set up shadow properties for the spotlight
 spotlight.shadow.mapSize.width = 128;  // default
@@ -354,6 +364,7 @@ spotlight.shadow.camera.fov = 45;
 
 // ----------[ Oranges ]----------\\
 
+
 var orange = [ ];
 var orangeSpeed = [ ];
 var orangeAcceleration = [ ];
@@ -362,6 +373,7 @@ const orangeRotationFactor = 0.2;
 function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
 }
+
 
 // ----------[ Game Logic ]----------\\
 
@@ -541,14 +553,14 @@ function createHUD()
 
 var init = function() {
 	scene = new THREE.Scene();
-	scene.fog = new THREE.FogExp2(0xffffff, 0.02);
+	//scene.fog = new THREE.FogExp2(0xffffff, 0.02);
 	
 	//Window
     renderer = new THREE.WebGLRenderer({alpha : true});
     renderer.setClearColor(0x000000, 1.0);
     renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.autoClear = false;
-	renderer.shadowMap.enabled = true;
+	//renderer.shadowMap.enabled = true;
 	document.body.appendChild( renderer.domElement );
 	
 	//Cameras
@@ -564,9 +576,11 @@ var init = function() {
 	window.addEventListener('resize', resize);
 	
 	//Lights
+	/*
 	for (var i = 0; i < pointLights.length ; i++) {
 		scene.add(pointLights[i]);
 	}
+	*/
 	
 	scene.add( spotlight );
 	scene.add( spotlight.target );
@@ -575,7 +589,7 @@ var init = function() {
 	scene.add(directional_light);
 
 	//Axis Helper
-    scene.add(new THREE.AxesHelper(10));
+    //scene.add(new THREE.AxesHelper(10));
 
 	//Objects setup
     scene.add(floor);
@@ -588,7 +602,7 @@ var init = function() {
     wall4.rotateY(Math.PI/2);
     //lay down horizontally
     floor.rotateX(-Math.PI/2);
-    scene.add(mirror);
+    //scene.add(mirror);
 	
     scene.add(car);
 	createHUD();
@@ -599,15 +613,15 @@ var init = function() {
 	scene.add(billboard);
 	
 	createCheerios();
-	createOranges();
+	//createOranges();
 
 	//Mouse Controls
     controls = new THREE.OrbitControls( camera, renderer.domElement );
     controls.addEventListener('change', render);
 
     //Key Down/Up
-    document.addEventListener('keydown', keyDown);
-    document.addEventListener('keyup', keyUp);
+    //document.addEventListener('keydown', keyDown);
+    //document.addEventListener('keyup', keyUp);
 
 	renderScene();
 
@@ -716,7 +730,7 @@ function createCheerios() {
 				cheerio[i] = object;
 				cheerio[i].rotation.y = (i*outerStep);
 				cheerio[i].translateX(20);
-				cheerio[i].castShadow = true;
+				//cheerio[i].castShadow = true;
 				scene.add(cheerio[i]);
 				});
 			});
@@ -739,7 +753,7 @@ function createOranges() {
 				
 				orange[i] = object;
 				orange[i].position.set(-50, 1, -30+(15*i));
-				orange[i].castShadow = true;
+				//orange[i].castShadow = true;
 				scene.add(orange[i]);
 				orangeSpeed[i] = getRandomFloat(0.05, 0.15);
 				orangeAcceleration[i] = getRandomFloat(0.001, 0.003);
@@ -940,6 +954,7 @@ function resetGame() {
 	resetCheerios();
 }
 
+/*
 var keyDown = function (event) {
 	//movement keys
 	switch (event.keyCode) {
@@ -966,6 +981,7 @@ var keyDown = function (event) {
 			break;
 	}
 };
+
 
 var keyUp = function (event) {
 	
@@ -1016,13 +1032,14 @@ var keyUp = function (event) {
 	}
 
 };
+*/
 
 function animate(){
 	if (!isPaused && !isGameOver) {
 		animateCar();
 		updateScore();
 		animateCheerios();
-		animateOranges();
+		//animateOranges();
 		if(drawParticles) {
 			iterateParticles();
 			particleSystem.geometry.verticesNeedUpdate = true;
@@ -1057,7 +1074,7 @@ function resize() {
 function render(){
 	renderer.clear();
 
-	/** /
+	/**/
 	var size = renderer.getSize();
 
 	renderer.setScissorTest( true );
@@ -1075,7 +1092,7 @@ function render(){
 	/**/
 
 	// comment the previous section and uncomment this to normal camera scheme
-	renderer.render(scene, camera);
+	//renderer.render(scene, camera);
 
 	renderer.render(hudScene, hudCamera);
 };
