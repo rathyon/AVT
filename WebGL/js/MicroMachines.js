@@ -871,6 +871,29 @@ function animateOranges() {
 
 }
 
+const stereoAngularSpeed = THREE.Math.degToRad(0.2);
+const stereoSpeed = 0.1;
+
+function animateStereoDemo(){
+	//stereoCarAngle = 0.1;
+	var aux = new THREE.Vector3();
+
+	carSpeed = stereoSpeed;
+	var cosCarAngle = Math.cos(-carAngle);
+	var sinCarAngle = Math.sin(-carAngle);
+
+	aux.setX(cosCarAngle * carSpeed);
+	aux.setZ(sinCarAngle  * carSpeed);
+	car.position.add(aux);
+	spotlight.position.set(car.position.x + 1.6*cosCarAngle, 1, car.position.z + 1.6*sinCarAngle);
+	spotlight.target.position.set(car.position.x + 3*cosCarAngle, 0, car.position.z + 3*sinCarAngle);
+
+	car.rotation.y -= stereoAngularSpeed;
+	carAngle -= stereoAngularSpeed;
+	carAngle = carAngle % (2*Math.PI);
+}
+
+
 function animateCar() {
 	var aux = new THREE.Vector3();
 
@@ -1036,7 +1059,8 @@ var keyUp = function (event) {
 
 function animate(){
 	if (!isPaused && !isGameOver) {
-		animateCar();
+		//animateCar();
+		animateStereoDemo();
 		updateScore();
 		animateCheerios();
 		//animateOranges();
