@@ -551,13 +551,13 @@ function createHUD()
 	hudScene.add(hudCamera);
 }
 
-var handleTouchEvent = function(e) {
+function handleTouchEvent() {
 	isPaused = !isPaused;
 }
 
-var onPhoneMove = function(e) {
-	camLeft.rotation.y = e.beta;
-	camRight.rotation.y = e.beta;
+function onPhoneMove(event) {
+	camLeft.rotation.y = THREE.Math.degToRad(event.beta) - (Math.PI / 2);
+	camRight.rotation.y = THREE.Math.degToRad(event.beta) - (Math.PI / 2);
 }
 
 var init = function() {
@@ -581,7 +581,7 @@ var init = function() {
 	
 	car.add(camLeft);
 	car.add(camRight);
-	document.addEventListener( 'deviceorientation', onPhoneMove, false );
+	window.addEventListener( 'deviceorientation', onPhoneMove, false);
 	
 	
 	// createStereo(aspect, fov, focus, realEyeSep)
