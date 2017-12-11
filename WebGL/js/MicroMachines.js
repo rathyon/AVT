@@ -132,7 +132,7 @@ var mirror = new THREE.Reflector( 70, 35, {
 	recursion: 1
 } );
 
-mirror.position.set(0, 17.5, -50);
+mirror.position.set(0, 17.5, -49.5);
 
 // ----------[ Geometry ]----------\\
 
@@ -273,14 +273,14 @@ geo_loader.load('js/models/car.obj', function(object){
 car.scale.set(2,2,2);
 
 var wall = new THREE.Mesh(floor_geo, floor_mat);
-wall.position.set(0,50,-50.5);
+wall.position.set(0,50,-50);
 
 var wall2 = new THREE.Mesh(floor_geo, floor_mat);
-wall2.position.set(0,50, 50.5);
+wall2.position.set(0,50, 50);
 var wall3 = new THREE.Mesh(floor_geo, floor_mat);
-wall3.position.set(50.5,50, 0);
+wall3.position.set(50,50, 0);
 var wall4 = new THREE.Mesh(floor_geo, floor_mat);
-wall4.position.set(-50.5,50, 0);
+wall4.position.set(-50,50, 0);
 
 var billboard = new THREE.Sprite(billboard_mat);
 billboard.position.set(0, 15, 0);
@@ -541,6 +541,7 @@ function createHUD()
 
 var init = function() {
 	scene = new THREE.Scene();
+	scene.fog = new THREE.FogExp2(0xffffff, 0.02);
 	
 	//Window
     renderer = new THREE.WebGLRenderer({alpha : true});
@@ -741,7 +742,7 @@ function createOranges() {
 				orange[i].position.set(-50, 1, -30+(15*i));
 				orange[i].castShadow = true;
 				scene.add(orange[i]);
-				orangeSpeed[i] = getRandomFloat(0.1, 0.3);
+				orangeSpeed[i] = getRandomFloat(0.05, 0.15);
 				orangeAcceleration[i] = getRandomFloat(0.001, 0.003);
 				
 				});
@@ -755,7 +756,7 @@ function resetOranges() {
 	for (var i = 0; i < NUMBER_ORANGES; i++) {
 		scene.remove(orange[i]);
 		orange[i].position.set(-50, 1, -30+(15*i));
-		orangeSpeed[i] = getRandomFloat(0.1, 0.3);
+		orangeSpeed[i] = getRandomFloat(0.05, 0.15);
 		orangeAcceleration[i] = getRandomFloat(0.001, 0.003);
 		scene.add(orange[i]);
 	}
