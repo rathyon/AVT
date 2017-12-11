@@ -364,6 +364,59 @@ var currentCheckPoint = 0;
 
 
 // ----------[ Init ]----------\\
+var camStereo = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
+camStereo.position.set(10, 10, 10);
+camStereo.lookAt(new THREE.Vector3(0,0,0));
+
+var camLeft = new THREE.PerspectiveCamera();
+var camRight = new THREE.PerspectiveCamera();
+camLeft.lookAt(new THREE.Vector3(5,0,0));
+camRight.lookAt(new THREE.Vector3(5,0,0));
+
+function createStereo(aspect, fov, focus, realEyeSep){
+	// assumes aspect comes divided by 2
+
+	var near = 0.1;
+
+	var eyeRight = new THREE.Matrix4();
+	var eyeLeft = new THREE.Matrix4();
+
+	var projectionMatrix = camStereo.projectionMatrix.clone();
+	var eyeSep = realEyeSep / 2;
+	// eye separation on projection
+	var D = eyeSep * near / focus;
+	var hdiv2 = near * Math.tan(THREE.Math.degToRad(fov) / 2);
+
+	var left, right;
+
+	// translate xOffset
+	eyeLeft.elements[ 12 ] = - eyeSep;
+	eyeRight.elements[ 12 ] = eyeSep;
+
+	// left eye
+	left = -aspect * hdiv2 + D;
+	right = aspect * hdiv2 + D;
+
+	projectionMatrix.elements[ 0 ] = 2 * near / ( right - left );
+	projectionMatrix.elements[ 8 ] = ( right + left ) / ( right - left );
+	camLeft.projectionMatrix.copy( projectionMatrix );
+
+	// right eye
+	left = -aspect * hdiv2 - D;
+	right = aspect * hdiv2 - D;
+
+	projectionMatrix.elements[ 0 ] = 2 * near / ( right - left );
+	projectionMatrix.elements[ 8 ] = ( right + left ) / ( right - left );
+
+	camRight.projectionMatrix.copy( projectionMatrix );
+
+	camLeft.matrixWorld.copy( camera.matrixWorld ).multiply( eyeLeft );
+	camRight.matrixWorld.copy( camera.matrixWorld ).multiply( eyeRight );
+
+	camLeft.position.y = 0.3;
+	camRight.position.y = 0.3;
+
+}
 
 function createHUD()
 {
@@ -420,8 +473,12 @@ var init = function() {
 	//Cameras
 	scene.add(camOrtho);
 	scene.add(camTop);
-
 	car.add(camChase);
+	car.add(camLeft);
+	car.add(camRight);
+
+	// createStereo(aspect, fov, focus, realEyeSep)
+	createStereo((window.innerWidth/window.innerHeight) / 2, 45, 30, 0.064);
 
 	window.addEventListener('resize', resize);
 	
@@ -851,7 +908,7 @@ var animate = function(){
 		animateCar();
 		updateScore();
 		animateCheerios();
-		animateOranges();
+		//animateOranges();
 	}
 };
 
@@ -869,12 +926,35 @@ var resize = function() {
 
 	camTop.aspect = window.innerWidth/window.innerHeight;
 	camTop.updateProjectionMatrix();
+
+	// createStereo(aspect, fov, focus, realEyeSep)
+	createStereo((window.innerWidth/window.innerHeight) / 2, 45, 30, 0.064);
 };
 
 var render = function (){
-		renderer.clear();
-		renderer.render(scene, camera);
-		renderer.render(hudScene, hudCamera);
+	renderer.clear();
+
+	/**/
+	var size = renderer.getSize();
+
+	renderer.setScissorTest( true );
+
+	renderer.setScissor( 0, 0, size.width / 2, size.height );
+	renderer.setViewport( 0, 0, size.width / 2, size.height );
+
+	renderer.render(scene, camLeft);
+
+	renderer.setScissor( size.width / 2, 0, size.width / 2, size.height );
+	renderer.setViewport( size.width / 2, 0, size.width / 2, size.height );
+	renderer.render(scene, camRight);
+
+	renderer.setScissorTest( false );
+	/**/
+
+	// comment the previous section and uncomment this to normal camera scheme
+	// renderer.render(scene, camera);
+
+	renderer.render(hudScene, hudCamera);
 };
 
 var renderScene = function() {
