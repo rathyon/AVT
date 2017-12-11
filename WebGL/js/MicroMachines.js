@@ -51,16 +51,16 @@ light1.position.set(200, 50, 0);
 light1.castShadow = true;
 light1.shadow.mapSize.width = 2048;
 light1.shadow.mapSize.height = 2048;
-light1.shadow.camera.near = 0.5;
-light1.shadow.camera.far = 500;
+light1.shadow.camera.near = 0.1;
+light1.shadow.camera.far = 5000;
 
 var light2 = new THREE.PointLight( 0xffcc66, 2);
 light2.position.set(-200, 50, 0);
 light2.castShadow = true;
 light2.shadow.mapSize.width = 2048;
 light2.shadow.mapSize.height = 2048;
-light2.shadow.camera.near = 0.5;
-light2.shadow.camera.far = 500;
+light2.shadow.camera.near = 0.1;
+light2.shadow.camera.far = 5000;
 
 // ----------[ Lens Flare ]----------\\
 
@@ -173,6 +173,10 @@ var life_mat = new THREE.MeshBasicMaterial({
   color : 0xcc0033,
 });
 
+var billboard_map = tex_loader.load('js/textures/blue_flame.png');
+
+var billboard_mat = new THREE.SpriteMaterial({ map: billboard_map, color: 0xffffff });
+
 var map0and2 = tex_loader.load('js/textures/checkpoint.png');
 map0and2.wrapS = THREE.RepeatWrapping;
 map0and2.wrapT = THREE.RepeatWrapping;
@@ -221,6 +225,17 @@ car.scale.set(2,2,2);
 
 var wall = new THREE.Mesh(floor_geo, floor_mat);
 wall.position.set(0,50,-50.5);
+
+var wall2 = new THREE.Mesh(floor_geo, floor_mat);
+wall2.position.set(0,50, 50.5);
+var wall3 = new THREE.Mesh(floor_geo, floor_mat);
+wall3.position.set(50.5,50, 0);
+var wall4 = new THREE.Mesh(floor_geo, floor_mat);
+wall4.position.set(-50.5,50, 0);
+
+var billboard = new THREE.Sprite(billboard_mat);
+billboard.position.set(0, 15, 0);
+billboard.scale.set(20, 20, 1);
 
 var checkPoint0 = new THREE.Mesh(checkpoint0and2_geo, checkpoint0and2_mat);
 checkPoint0.rotateX(-Math.PI / 2);
@@ -378,6 +393,12 @@ var init = function() {
 	//Objects setup
     scene.add(floor);
     scene.add(wall);
+    scene.add(wall2);
+    scene.add(wall3);
+    scene.add(wall4);
+    wall2.rotateY(THREE.Math.degToRad(180));
+    wall3.rotateY(THREE.Math.degToRad(-90));
+    wall4.rotateY(THREE.Math.degToRad(90));
     //lay down horizontally
     floor.rotateX(THREE.Math.degToRad(-90));
     scene.add(mirror);
@@ -388,6 +409,7 @@ var init = function() {
 	scene.add(checkPoint1);
 	scene.add(checkPoint2);
 	scene.add(checkPoint3);
+	scene.add(billboard);
 	
 	resetCheerios();
 	resetOranges();
